@@ -19,9 +19,6 @@ use hdf::Hdf5Cache;
 
 mod lc;
 
-mod pg;
-use pg::PGLightCurves;
-
 mod traits;
 use traits::{Cache, LightCurvesDataBase, ObservationsToLightCurves};
 
@@ -182,14 +179,6 @@ pub fn run(config: Config) {
             dumper.dump_query_iter(cache.reader());
         }
         None => match config.database {
-            DataBase::Postgres => {
-                let mut light_curves = PGLightCurves::new(&config.connection_config);
-                let lc_query = light_curves.query(&config.sql_query);
-                let lce_iter = lc_query
-                    .into_iter()
-                    .light_curves(config.light_curves_are_sorted);
-                dumper.dump_query_iter(lce_iter);
-            }
             DataBase::ClickHouse => {
                 let mut light_curves = CHLightCurves::new(&config.connection_config);
                 let lc_query = light_curves.query(&config.sql_query);

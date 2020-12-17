@@ -9,7 +9,7 @@ pub fn arg_matches() -> ArgMatches<'static> {
         .arg(
             Arg::with_name("database")
                 .required(true)
-                .possible_values(&["postgres", "clickhouse"])
+                .possible_values(&["clickhouse"])
                 .index(1)
                 .help("Database (DB) type"),
         )
@@ -23,14 +23,7 @@ pub fn arg_matches() -> ArgMatches<'static> {
                 .short("c")
                 .long("connect")
                 .takes_value(true)
-                .default_value_ifs(&[
-                    (
-                        "database",
-                        Some("postgres"),
-                        "host=/var/run/postgresql user=api",
-                    ),
-                    ("database", Some("clickhouse"), "tcp://localhost:9000"),
-                ])
+                .default_value_ifs(&[("database", Some("clickhouse"), "tcp://localhost:9000")])
                 .help("Connection configuration in form used by chosen DB"),
         )
         .arg(
@@ -93,7 +86,6 @@ pub fn arg_matches() -> ArgMatches<'static> {
 }
 
 pub enum DataBase {
-    Postgres,
     ClickHouse,
 }
 
@@ -128,9 +120,8 @@ impl Config {
         no_oid: bool,
     ) -> Self {
         let database = match database_type {
-            "postgres" => DataBase::Postgres,
             "clickhouse" => DataBase::ClickHouse,
-            _ => panic!("database must be postgres or clickhouse"),
+            _ => panic!("only clickhouse database is supported"),
         };
         let oid_path = match !no_oid {
             true => Some(Self::get_path(output_dir, "oid", suffix, ".dat")),

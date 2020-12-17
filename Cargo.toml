@@ -11,7 +11,6 @@ codegen-units = 1
 [dependencies]
 light-curve-interpol = "0.1.0"
 light-curve-common = "0.1.0"
-postgres = "^0.17.3"
 fallible-iterator = "^0.2.0"
 num-traits = "^0.2.0"
 conv = "^0.3.2"
@@ -30,8 +29,8 @@ base64 = "^0.12.2"
 
 [dependencies.light-curve-feature]
 version = "0.1.27-beta.1"
-default-features = false
-features = ["fftw-mkl"]
+#default-features = false
+#features = ["fftw-mkl"]
 
 [dependencies.clickhouse-rs]
 git="https://github.com/suharev7/clickhouse-rs/"
