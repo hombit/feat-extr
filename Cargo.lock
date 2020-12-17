@@ -550,7 +550,7 @@ checksum = "5c85295147490b8fcf2ea3d104080a105a8b2c63f9c319e82c02d8e952388919"
 
 [[package]]
 name = "feat_extr"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "async-std",
  "base64",
@@ -925,18 +925,20 @@ dependencies = [
 
 [[package]]
 name = "light-curve-feature"
-version = "0.1.28"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc189eb3214aa217b7dc13b031e6d57574e03326888a4697560bcd8a8128053d"
+checksum = "10b55c07378645c94c28d469e758b98bd9b338ebdf1d63b1b124745fc2ff4e16"
 dependencies = [
  "conv",
  "dyn-clonable",
  "fftw",
  "itertools 0.9.0",
+ "lazy_static 1.4.0",
  "libm",
  "light-curve-common",
  "num-complex",
  "num-traits",
+ "thiserror",
  "unzip3",
 ]
 

@@ -23,7 +23,7 @@ mod traits;
 use traits::{Cache, LightCurvesDataBase, ObservationsToLightCurves};
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct TruncMedianNyquistFreq {
     m: MedianNyquistFreq,
     max_freq: f32,
@@ -47,7 +47,7 @@ impl NyquistFreq<f32> for TruncMedianNyquistFreq {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct TruncQuantileNyquistFreq {
     q: QuantileNyquistFreq,
     max_freq: f32,
@@ -88,26 +88,22 @@ pub fn run(config: Config) {
 
     if let Some(fc) = &config.feature_config {
         let mut bins = Bins::new(1.0, 0.0);
-        bins.add_features(vec![
-            Box::new(LinearFit::default()),
-            Box::new(LinearTrend::default()),
-        ]);
+        bins.add_feature(Box::new(LinearFit::default()));
+        bins.add_feature(Box::new(LinearTrend::default()));
 
         let mut periodogram_feature_evaluator = Periodogram::new(3);
         periodogram_feature_evaluator
             .set_nyquist(Box::new(TruncMedianNyquistFreq::new(1.0 / 24.0)));
         periodogram_feature_evaluator.set_max_freq_factor(2.0);
-        periodogram_feature_evaluator.add_features(vec![
-            Box::new(Amplitude::default()),
-            Box::new(BeyondNStd::default()),
-            Box::new(BeyondNStd::new(2.0)),
-            Box::new(Cusum::default()),
-            Box::new(Eta::default()),
-            Box::new(InterPercentileRange::default()),
-            Box::new(StandardDeviation::default()),
-            Box::new(PercentAmplitude::default()),
-        ]);
-        
+        periodogram_feature_evaluator.add_feature(Box::new(Amplitude::default()));
+        periodogram_feature_evaluator.add_feature(Box::new(BeyondNStd::default()));
+        periodogram_feature_evaluator.add_feature(Box::new(BeyondNStd::new(2.0)));
+        periodogram_feature_evaluator.add_feature(Box::new(Cusum::default()));
+        periodogram_feature_evaluator.add_feature(Box::new(Eta::default()));
+        periodogram_feature_evaluator.add_feature(Box::new(InterPercentileRange::default()));
+        periodogram_feature_evaluator.add_feature(Box::new(StandardDeviation::default()));
+        periodogram_feature_evaluator.add_feature(Box::new(PercentAmplitude::default()));
+
         let feature_extractor = feat_extr!(
             Amplitude::default(),
             AndersonDarlingNormal::default(),

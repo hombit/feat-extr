@@ -2,7 +2,7 @@ use crate::lc::LightCurveEntry;
 use crate::traits::*;
 use crossbeam::channel::{bounded as bounded_channel, Receiver, Sender};
 use dyn_clone::clone_box;
-use light_curve_feature::{time_series::TimeSeries, FeatureExtractor};
+use light_curve_feature::{time_series::TimeSeries, FeatureEvaluator, FeatureExtractor};
 use light_curve_interpol::Interpolator;
 use num_cpus;
 use std::fs::File;
@@ -50,9 +50,10 @@ struct FeatureDump {
 
 impl Dump for FeatureDump {
     fn eval(&self, lce: &LightCurveEntry) -> Vec<u8> {
-        let ts = TimeSeries::new(&lce.t[..], &lce.mag[..], Some(&lce.err2[..]));
+        let mut ts = TimeSeries::new(&lce.t[..], &lce.mag[..], Some(&lce.err2[..]));
         self.feature_extractor
-            .eval(ts)
+            .eval(&mut ts)
+            .expect("Some feature cannot be extracted")
             .iter()
             .flat_map(|x| x.to_bits().to_ne_bytes().to_vec())
             .collect()

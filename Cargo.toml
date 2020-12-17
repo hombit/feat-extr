@@ -1,6 +1,6 @@
 [package]
 name = "feat_extr"
-version = "0.2.4"
+version = "0.3.0"
 authors = ["Konstantin Malanchev <hombit@gmail.com>"]
 edition = "2018"
 
@@ -28,7 +28,7 @@ dyn-clone = "^1.0.2"
 base64 = "^0.12.2"
 
 [dependencies.light-curve-feature]
-version = "0.1.27-beta.1"
+version = "0.2.0"
 #default-features = false
 #features = ["fftw-mkl"]
 
