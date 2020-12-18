@@ -51,7 +51,8 @@ impl Dump for FluxDump {
 struct FeatureDump {
     value_path: String,
     name_path: String,
-    feature_extractor: FeatureExtractor<f32>,
+    magn_feature_extractor: FeatureExtractor<f32>,
+    flux_feature_extractor: FeatureExtractor<f32>,
     passbands: Vec<Passband>,
     names: Vec<String>,
 }
@@ -60,22 +61,30 @@ impl FeatureDump {
     fn new(
         value_path: String,
         name_path: String,
-        feature_extractor: FeatureExtractor<f32>,
+        magn_feature_extractor: FeatureExtractor<f32>,
+        flux_feature_extractor: FeatureExtractor<f32>,
         passbands: Vec<Passband>,
     ) -> Self {
-        let feature_extractor_names = feature_extractor.get_names();
-        let names = passbands
-            .iter()
-            .flat_map(|&passband| {
+        let magn_feature_extractor_names = magn_feature_extractor.get_names();
+        let flux_feature_extractor_names = flux_feature_extractor.get_names();
+        let names = [
+            (magn_feature_extractor_names, "magn"),
+            (flux_feature_extractor_names, "flux"),
+        ]
+        .iter()
+        .flat_map(|(feature_extractor_names, brightness_type)| {
+            passbands.iter().flat_map(move |&passband| {
                 feature_extractor_names
                     .iter()
-                    .map(move |name| format!("{}_{}", name, passband))
+                    .map(move |name| format!("{}_{}_{}", name, brightness_type, passband))
             })
-            .collect();
+        })
+        .collect();
         Self {
             value_path,
             name_path,
-            feature_extractor,
+            magn_feature_extractor,
+            flux_feature_extractor,
             passbands,
             names,
         }
@@ -87,15 +96,22 @@ impl Dump for FeatureDump {
         let mut result = vec![];
         for &passband in self.passbands.iter() {
             let lc = source.lc(passband);
-            let mut ts = TimeSeries::new(&lc.t[..], &lc.mag[..], Some(&lc.w[..]));
-            self.feature_extractor
-                .eval(&mut ts)
-                .expect("Some feature cannot be extracted")
-                .iter()
-                .for_each(|x| {
-                    let bytes = x.to_bits().to_ne_bytes();
-                    result.extend_from_slice(&bytes);
-                });
+            let flux: Vec<_> = lc.mag.iter().map(|&x| 10_f32.powf(-0.4 * x)).collect();
+            let ts_magn = TimeSeries::new(&lc.t[..], &lc.mag[..], Some(&lc.w[..]));
+            let ts_flux = TimeSeries::new(&lc.t[..], &flux, Some(&lc.w[..]));
+            for (feature_extractor, ts) in &mut [
+                (&self.magn_feature_extractor, ts_magn),
+                (&self.flux_feature_extractor, ts_flux),
+            ] {
+                feature_extractor
+                    .eval(ts)
+                    .expect("Some feature cannot be extracted")
+                    .iter()
+                    .for_each(|x| {
+                        let bytes = x.to_bits().to_ne_bytes();
+                        result.extend_from_slice(&bytes);
+                    });
+            }
         }
         result
     }
@@ -172,12 +188,14 @@ impl Dumper {
         &mut self,
         value_path: String,
         name_path: String,
-        feature_extractor: FeatureExtractor<f32>,
+        magn_feature_extractor: FeatureExtractor<f32>,
+        flux_feature_extractor: FeatureExtractor<f32>,
     ) -> &mut Self {
         self.dumps.push(Arc::new(FeatureDump::new(
             value_path,
             name_path,
-            feature_extractor,
+            magn_feature_extractor,
+            flux_feature_extractor,
             self.passbands.clone(),
         )));
         self

@@ -87,34 +87,25 @@ pub fn run(config: Config) {
     }
 
     if let Some(fc) = &config.feature_config {
-        let mut bins = Bins::new(1.0, 0.0);
-        bins.add_feature(Box::new(LinearFit::default()));
-        bins.add_feature(Box::new(LinearTrend::default()));
-
-        let mut periodogram_feature_evaluator = Periodogram::new(3);
-        periodogram_feature_evaluator
-            .set_nyquist(Box::new(TruncMedianNyquistFreq::new(1.0 / 24.0)));
+        let mut periodogram_feature_evaluator = Periodogram::new(5);
+        periodogram_feature_evaluator.set_nyquist(Box::new(AverageNyquistFreq));
+        periodogram_feature_evaluator.set_freq_resolution(10.0);
         periodogram_feature_evaluator.set_max_freq_factor(2.0);
         periodogram_feature_evaluator.add_feature(Box::new(Amplitude::default()));
-        periodogram_feature_evaluator.add_feature(Box::new(BeyondNStd::default()));
         periodogram_feature_evaluator.add_feature(Box::new(BeyondNStd::new(2.0)));
-        periodogram_feature_evaluator.add_feature(Box::new(Cusum::default()));
-        periodogram_feature_evaluator.add_feature(Box::new(Eta::default()));
-        periodogram_feature_evaluator.add_feature(Box::new(InterPercentileRange::default()));
+        periodogram_feature_evaluator.add_feature(Box::new(BeyondNStd::new(3.0)));
         periodogram_feature_evaluator.add_feature(Box::new(StandardDeviation::default()));
-        periodogram_feature_evaluator.add_feature(Box::new(PercentAmplitude::default()));
 
-        let feature_extractor = feat_extr!(
+        let magn_feature_extractor = feat_extr!(
             Amplitude::default(),
             AndersonDarlingNormal::default(),
-            BeyondNStd::default(),
+            BeyondNStd::new(1.0), // default
             BeyondNStd::new(2.0),
-            bins,
             Cusum::default(),
-            Eta::default(),
             EtaE::default(),
-            InterPercentileRange::default(),
+            InterPercentileRange::new(0.02),
             InterPercentileRange::new(0.1),
+            InterPercentileRange::new(0.25),
             Kurtosis::default(),
             LinearFit::default(),
             LinearTrend::default(),
@@ -123,27 +114,36 @@ pub fn run(config: Config) {
             MaximumSlope::default(),
             Mean::default(),
             MedianAbsoluteDeviation::default(),
-            MedianBufferRangePercentage::new(0.05), // not default
+            MedianBufferRangePercentage::new(0.1),
+            MedianBufferRangePercentage::new(0.2),
             PercentAmplitude::default(),
             PercentDifferenceMagnitudePercentile::new(0.05), // default
-            PercentDifferenceMagnitudePercentile::new(0.2),
+            PercentDifferenceMagnitudePercentile::new(0.1),
             periodogram_feature_evaluator,
             ReducedChi2::default(),
             Skew::default(),
             StandardDeviation::default(),
             StetsonK::default(),
             WeightedMean::default(),
-            antifeatures::Duration::default(),
-            antifeatures::MaximumTimeInterval::default(),
-            antifeatures::MinimumTimeInterval::default(),
-            antifeatures::ObservationCount::default(),
-            antifeatures::TimeMean::default(),
-            antifeatures::TimeStandardDeviation::default(),
         );
+
+        let flux_feature_extractor = feat_extr!(
+            AndersonDarlingNormal::default(),
+            Cusum::default(),
+            EtaE::default(),
+            ExcessVariance::default(),
+            Kurtosis::default(),
+            MeanVariance::default(),
+            ReducedChi2::default(),
+            Skew::default(),
+            StetsonK::default(),
+        );
+
         dumper.set_feature_extractor(
             fc.value_path.clone(),
             fc.name_path.clone(),
-            feature_extractor,
+            magn_feature_extractor,
+            flux_feature_extractor,
         );
     }
 
