@@ -1,16 +1,16 @@
-use crate::lc::{LightCurveObservation, MJD0};
-use crate::traits::{LightCurvesDataBase, ObservationsToLightCurves};
+use crate::lc::{Observation, Passband, MJD0};
+use crate::traits::{ObservationsToSources, SourceDataBase};
 use async_std::task;
 use clickhouse_rs::errors::Error;
 use clickhouse_rs::types::{Block, FromSql};
 use clickhouse_rs::{ClientHandle, Pool};
 use futures_util::stream::{BoxStream, StreamExt};
 
-pub struct CHLightCurves {
+pub struct CHSourceDataBase {
     client: ClientHandle,
 }
 
-impl CHLightCurves {
+impl CHSourceDataBase {
     pub fn new(url: &str) -> Self {
         let pool = Pool::new(url);
         let client = task::block_on(pool.get_handle()).unwrap();
@@ -18,28 +18,28 @@ impl CHLightCurves {
     }
 }
 
-impl<'a> LightCurvesDataBase<'a> for CHLightCurves {
-    type Query = CHLightCurvesQuery<'a>;
+impl<'a> SourceDataBase<'a> for CHSourceDataBase {
+    type Query = CHQuery<'a>;
 
     fn query(&'a mut self, query: &str) -> Self::Query {
-        CHLightCurvesQuery::new(self, query)
+        CHQuery::new(self, query)
     }
 }
 
-pub struct CHLightCurvesQuery<'a> {
+pub struct CHQuery<'a> {
     stream: BoxStream<'a, Result<Block, Error>>,
 }
 
-impl<'a> CHLightCurvesQuery<'a> {
-    pub fn new(ch_light_curves: &'a mut CHLightCurves, query: &str) -> Self {
-        let stream = ch_light_curves.client.query(query).stream_blocks();
+impl<'a> CHQuery<'a> {
+    pub fn new(ch_db: &'a mut CHSourceDataBase, query: &str) -> Self {
+        let stream = ch_db.client.query(query).stream_blocks();
         Self { stream }
     }
 }
 
-impl<'a> IntoIterator for CHLightCurvesQuery<'a> {
-    type Item = LightCurveObservation;
-    type IntoIter = CHLightCurvesQueryIterator<'a>;
+impl<'a> IntoIterator for CHQuery<'a> {
+    type Item = Observation;
+    type IntoIter = CHQueryIterator<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self)
@@ -77,29 +77,36 @@ impl CurrentBlock {
     }
 }
 
-pub struct CHLightCurvesQueryIterator<'a> {
-    query: CHLightCurvesQuery<'a>,
+pub struct CHQueryIterator<'a> {
+    query: CHQuery<'a>,
     block: Option<CurrentBlock>,
 }
 
-impl<'a> CHLightCurvesQueryIterator<'a> {
-    fn new(query: CHLightCurvesQuery<'a>) -> Self {
+impl<'a> CHQueryIterator<'a> {
+    fn new(query: CHQuery<'a>) -> Self {
         Self { query, block: None }
     }
 
-    fn row_to_obs(row: Row) -> LightCurveObservation {
-        let oid: u64 = row.get("oid").unwrap();
+    fn row_to_obs(row: Row) -> Observation {
+        let sid: u64 = row.get("sid").unwrap();
+        let filter: u8 = row.get("filter").unwrap();
         let mjd: f64 = row.get("mjd").unwrap();
         let t = (mjd - MJD0) as f32;
         let mag: f32 = row.get("mag").unwrap();
         let magerr: f32 = row.get("magerr").unwrap();
-        let err2 = magerr.powi(2);
-        LightCurveObservation { oid, t, mag, err2 }
+        let w = magerr.powi(-2);
+        Observation {
+            sid,
+            passband: Passband::from_code(filter),
+            t,
+            mag,
+            w,
+        }
     }
 }
 
-impl<'a> Iterator for CHLightCurvesQueryIterator<'a> {
-    type Item = LightCurveObservation;
+impl<'a> Iterator for CHQueryIterator<'a> {
+    type Item = Observation;
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.block.is_none()
@@ -124,4 +131,4 @@ impl<'a> Iterator for CHLightCurvesQueryIterator<'a> {
     }
 }
 
-impl<'a> ObservationsToLightCurves for CHLightCurvesQueryIterator<'a> {}
+impl<'a> ObservationsToSources for CHQueryIterator<'a> {}

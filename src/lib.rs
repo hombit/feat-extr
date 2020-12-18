@@ -6,7 +6,7 @@ use std::io::Write;
 use std::path::Path;
 
 pub mod ch;
-use ch::CHLightCurves;
+use ch::CHSourceDataBase;
 
 pub mod config;
 use config::{Config, DataBase};
@@ -20,7 +20,7 @@ use hdf::Hdf5Cache;
 mod lc;
 
 mod traits;
-use traits::{Cache, LightCurvesDataBase, ObservationsToLightCurves};
+use traits::{Cache, ObservationsToSources, SourceDataBase};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -71,9 +71,9 @@ impl NyquistFreq<f32> for TruncQuantileNyquistFreq {
 }
 
 pub fn run(config: Config) {
-    let mut dumper = Dumper::new();
+    let mut dumper = Dumper::new(&config.passbands);
 
-    if let Some(oid_path) = config.oid_path {
+    if let Some(oid_path) = config.sid_path {
         dumper.set_oid_writer(oid_path.clone());
     }
 
@@ -176,12 +176,10 @@ pub fn run(config: Config) {
         }
         None => match config.database {
             DataBase::ClickHouse => {
-                let mut light_curves = CHLightCurves::new(&config.connection_config);
-                let lc_query = light_curves.query(&config.sql_query);
-                let lce_iter = lc_query
-                    .into_iter()
-                    .light_curves(config.light_curves_are_sorted);
-                dumper.dump_query_iter(lce_iter);
+                let mut source_db = CHSourceDataBase::new(&config.connection_config);
+                let query = source_db.query(&config.sql_query);
+                let source_iter = query.into_iter().sources(config.light_curves_are_sorted);
+                dumper.dump_query_iter(source_iter);
             }
         },
     }

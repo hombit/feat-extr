@@ -1,50 +1,49 @@
-use crate::lc::{LightCurveEntry, LightCurveObservation};
+use crate::lc::{LightCurve, Observation, Source};
 use dyn_clone::DynClone;
-use unzip3::Unzip3;
 
-pub trait LightCurvesDataBase<'a> {
-    type Query: IntoIterator<Item = LightCurveObservation>;
+pub trait SourceDataBase<'a> {
+    type Query: IntoIterator<Item = Observation>;
 
     fn query(&'a mut self, query: &str) -> Self::Query;
 }
 
 pub trait Dump: Send + Sync {
-    fn eval(&self, lce: &LightCurveEntry) -> Vec<u8>;
+    fn eval(&self, source: &Source) -> Vec<u8>;
     fn get_names(&self) -> Vec<&str>;
     fn get_value_path(&self) -> &str;
     fn get_name_path(&self) -> Option<&str>;
 }
 
 pub trait Cache: DynClone + Send {
-    fn reader(&self) -> Box<dyn Iterator<Item = LightCurveEntry>>;
+    fn reader(&self) -> Box<dyn Iterator<Item = Source>>;
     fn writer(&self) -> Box<dyn CacheWriter>;
 }
 
 pub trait CacheWriter {
-    fn write(&mut self, lce: &LightCurveEntry);
+    fn write(&mut self, source: &Source);
 }
 
-pub trait ObservationsToLightCurves: Iterator<Item = LightCurveObservation>
+pub trait ObservationsToSources: Iterator<Item = Observation>
 where
     Self: Sized,
 {
-    fn light_curves(self, sorted: bool) -> LightCurveIterator<Self> {
-        LightCurveIterator::new(self, sorted)
+    fn sources(self, sorted: bool) -> SourceIterator<Self> {
+        SourceIterator::new(self, sorted)
     }
 }
 
-pub struct LightCurveIterator<I>
+pub struct SourceIterator<I>
 where
-    I: Iterator<Item = LightCurveObservation>,
+    I: Iterator<Item = Observation>,
 {
     observations: I,
     sorted: bool,
-    current_obs: Option<LightCurveObservation>,
+    current_obs: Option<Observation>,
 }
 
-impl<I> LightCurveIterator<I>
+impl<I> SourceIterator<I>
 where
-    I: Iterator<Item = LightCurveObservation>,
+    I: Iterator<Item = Observation>,
 {
     fn new(observations: I, sorted: bool) -> Self {
         Self {
@@ -55,35 +54,62 @@ where
     }
 }
 
-impl<I> Iterator for LightCurveIterator<I>
+impl<I> Iterator for SourceIterator<I>
 where
-    I: Iterator<Item = LightCurveObservation>,
+    I: Iterator<Item = Observation>,
 {
-    type Item = LightCurveEntry;
+    type Item = Source;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (oid, mut triples) = match self.current_obs.as_ref() {
-            Some(obs) => (obs.oid, vec![(obs.t, obs.mag, obs.err2)]),
+        let mut source = Source {
+            sid: 0,
+            lcs: [
+                LightCurve {
+                    t: vec![],
+                    mag: vec![],
+                    w: vec![],
+                },
+                LightCurve {
+                    t: vec![],
+                    mag: vec![],
+                    w: vec![],
+                },
+                LightCurve {
+                    t: vec![],
+                    mag: vec![],
+                    w: vec![],
+                },
+            ],
+        };
+
+        source.sid = match self.current_obs.as_ref() {
+            Some(obs) => {
+                source.push_observation(obs);
+                obs.sid
+            }
             None => {
                 let next_obs = self.observations.next();
                 match next_obs.as_ref() {
-                    Some(obs) => (obs.oid, vec![(obs.t, obs.mag, obs.err2)]),
+                    Some(obs) => {
+                        source.push_observation(obs);
+                        obs.sid
+                    }
                     None => return None,
                 }
             }
         };
         self.current_obs = None;
         while let Some(obs) = self.observations.next() {
-            if obs.oid != oid {
+            if obs.sid != source.sid {
                 self.current_obs = Some(obs);
                 break;
             }
-            triples.push((obs.t, obs.mag, obs.err2));
+
+            source.push_observation(&obs);
         }
         if !self.sorted {
-            triples.sort_unstable_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+            source.sort();
         }
-        let (t, mag, err2) = triples.into_iter().unzip3();
-        Some(LightCurveEntry { oid, t, mag, err2 })
+        Some(source)
     }
 }

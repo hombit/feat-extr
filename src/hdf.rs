@@ -1,50 +1,10 @@
-use crate::lc::LightCurveEntry;
-use crate::traits::{Cache, CacheWriter};
-use hdf5::types::VarLenArray;
-use hdf5::{Dataset, H5Type};
+use crate::lc::{Observation, Source};
+use crate::traits::{Cache, CacheWriter, ObservationsToSources};
+use hdf5::Dataset;
 use ndarray;
 
-const DATASET_SIZE_STEP: hdf5::Ix = 1 << 10;
+const DATASET_SIZE_STEP: hdf5::Ix = 1 << 16;
 static DATASET_NAME: &'static str = "dataset";
-
-#[derive(H5Type)]
-#[repr(C)]
-struct LightCurveHdf5Entry {
-    oid: u64,
-    t: VarLenArray<f32>,
-    mag: VarLenArray<f32>,
-    err2: VarLenArray<f32>,
-}
-
-trait ToHdf5 {
-    fn to_hdf5(&self) -> LightCurveHdf5Entry;
-}
-
-impl ToHdf5 for LightCurveEntry {
-    fn to_hdf5(&self) -> LightCurveHdf5Entry {
-        LightCurveHdf5Entry {
-            oid: self.oid,
-            t: VarLenArray::from_slice(&self.t),
-            mag: VarLenArray::from_slice(&self.mag),
-            err2: VarLenArray::from_slice(&self.err2),
-        }
-    }
-}
-
-trait FromHdf5 {
-    fn from_hdf5(entry: &LightCurveHdf5Entry) -> Self;
-}
-
-impl FromHdf5 for LightCurveEntry {
-    fn from_hdf5(entry: &LightCurveHdf5Entry) -> Self {
-        Self {
-            oid: entry.oid,
-            t: entry.t.as_slice().to_vec(),
-            mag: entry.mag.as_slice().to_vec(),
-            err2: entry.err2.as_slice().to_vec(),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct Hdf5Cache {
@@ -55,7 +15,7 @@ impl Hdf5Cache {
     fn dataset(&self, path: String, create: bool) -> hdf5::Result<hdf5::Dataset> {
         let dataset = if create {
             let file = hdf5::File::create(path)?;
-            file.new_dataset::<LightCurveHdf5Entry>()
+            file.new_dataset::<Observation>()
                 .resizable(true)
                 .create(DATASET_NAME, [DATASET_SIZE_STEP])?
         } else {
@@ -67,9 +27,11 @@ impl Hdf5Cache {
 }
 
 impl Cache for Hdf5Cache {
-    fn reader(&self) -> Box<dyn Iterator<Item = LightCurveEntry>> {
+    fn reader(&self) -> Box<dyn Iterator<Item = Source>> {
         let dataset = self.dataset(self.path.clone(), false).unwrap();
-        Box::new(Hdf5CacheReader::new(dataset))
+        let obs_reader = Hdf5ObservationReader::new(dataset);
+        let source_reader = obs_reader.sources(true);
+        Box::new(source_reader)
     }
 
     fn writer(&self) -> Box<dyn CacheWriter> {
@@ -78,39 +40,53 @@ impl Cache for Hdf5Cache {
     }
 }
 
-struct Hdf5CacheReader {
+struct Hdf5ObservationReader {
     dataset: Dataset,
-    index: usize,
-    size: usize,
+    dataset_index: usize,
+    dataset_size: usize,
+    buffer: ndarray::Array1<Observation>,
+    buffer_index: usize,
 }
 
-impl Hdf5CacheReader {
+impl Hdf5ObservationReader {
     fn new(dataset: Dataset) -> Self {
         let size = dataset.size();
         Self {
             dataset,
-            index: 0,
-            size,
+            dataset_index: 0,
+            dataset_size: size,
+            buffer: ndarray::Array1::from(vec![]),
+            buffer_index: 0,
         }
     }
 }
 
-impl Iterator for Hdf5CacheReader {
-    type Item = LightCurveEntry;
+impl Iterator for Hdf5ObservationReader {
+    type Item = Observation;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let result = if self.index == self.size {
-            None
-        } else {
-            let slice = ndarray::s![self.index..self.index + 1];
-            self.index += 1;
-            let array = self.dataset.as_reader().read_slice_1d(&slice).unwrap();
-            let entry = array.first().unwrap();
-            Some(LightCurveEntry::from_hdf5(entry))
-        };
+        if self.dataset_index == self.dataset_size {
+            return None;
+        }
+
+        if self.buffer_index == self.buffer.len() {
+            let begin = self.dataset_index;
+            let end = usize::min(self.dataset_index + DATASET_SIZE_STEP, self.dataset_size);
+            let slice = ndarray::s![begin..end];
+
+            self.buffer = self.dataset.as_reader().read_slice_1d(&slice).unwrap();
+            self.buffer_index = 0;
+        }
+
+        let result = Some(self.buffer[self.buffer_index].clone());
+        self.dataset_index += 1;
+        self.buffer_index += 1;
+
         result
     }
 }
+
+impl ObservationsToSources for Hdf5ObservationReader {}
 
 struct Hdf5CacheWriter {
     dataset: Dataset,
@@ -130,19 +106,24 @@ impl Hdf5CacheWriter {
 }
 
 impl CacheWriter for Hdf5CacheWriter {
-    fn write(&mut self, lce: &LightCurveEntry) {
+    fn write(&mut self, source: &Source) {
+        let begin = self.index;
+        self.index += source.len();
         if self.index >= self.size {
-            self.size += DATASET_SIZE_STEP;
+            while self.size <= self.index {
+                self.size += DATASET_SIZE_STEP;
+            }
             self.dataset.resize(self.size).unwrap();
         }
-        let slice = ndarray::s![self.index..self.index + 1];
-        self.dataset.write_slice(&[lce.to_hdf5()], &slice).unwrap();
-        self.index += 1;
+        for (i, obs) in source.iter_observations().enumerate() {
+            let slice = ndarray::s![begin + i..begin + i + 1];
+            self.dataset.write_slice(&[obs], &slice).unwrap();
+        }
     }
 }
 
 impl Drop for Hdf5CacheWriter {
     fn drop(&mut self) {
-        self.dataset.resize(self.index + 1).unwrap();
+        self.dataset.resize(self.index).unwrap();
     }
 }

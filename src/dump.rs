@@ -1,4 +1,4 @@
-use crate::lc::LightCurveEntry;
+use crate::lc::{Passband, Source};
 use crate::traits::*;
 use crossbeam::channel::{bounded as bounded_channel, Receiver, Sender};
 use dyn_clone::clone_box;
@@ -12,21 +12,27 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::thread;
 
-const MIN_NUMBER_OF_OBSERVATIONS: usize = 4;
-
 struct FluxDump {
     path: String,
     interpolator: Interpolator<f32, f32>,
+    passbands: Vec<Passband>,
 }
 
 impl Dump for FluxDump {
-    fn eval(&self, lce: &LightCurveEntry) -> Vec<u8> {
-        let flux: Vec<_> = lce.mag.iter().map(|&x| 10_f32.powf(-0.4 * x)).collect();
-        self.interpolator
-            .interpolate(&lce.t[..], &flux[..])
-            .iter()
-            .flat_map(|x| x.to_bits().to_ne_bytes().to_vec())
-            .collect()
+    fn eval(&self, source: &Source) -> Vec<u8> {
+        let mut result = vec![];
+        for &passband in self.passbands.iter() {
+            let lc = source.lc(passband);
+            let flux: Vec<_> = lc.mag.iter().map(|&x| 10_f32.powf(-0.4 * x)).collect();
+            self.interpolator
+                .interpolate(&lc.t[..], &flux[..])
+                .iter()
+                .for_each(|x| {
+                    let bytes = x.to_bits().to_ne_bytes();
+                    result.extend_from_slice(&bytes);
+                });
+        }
+        result
     }
 
     fn get_names(&self) -> Vec<&str> {
@@ -46,21 +52,56 @@ struct FeatureDump {
     value_path: String,
     name_path: String,
     feature_extractor: FeatureExtractor<f32>,
+    passbands: Vec<Passband>,
+    names: Vec<String>,
+}
+
+impl FeatureDump {
+    fn new(
+        value_path: String,
+        name_path: String,
+        feature_extractor: FeatureExtractor<f32>,
+        passbands: Vec<Passband>,
+    ) -> Self {
+        let feature_extractor_names = feature_extractor.get_names();
+        let names = passbands
+            .iter()
+            .flat_map(|&passband| {
+                feature_extractor_names
+                    .iter()
+                    .map(move |name| format!("{}_{}", name, passband))
+            })
+            .collect();
+        Self {
+            value_path,
+            name_path,
+            feature_extractor,
+            passbands,
+            names,
+        }
+    }
 }
 
 impl Dump for FeatureDump {
-    fn eval(&self, lce: &LightCurveEntry) -> Vec<u8> {
-        let mut ts = TimeSeries::new(&lce.t[..], &lce.mag[..], Some(&lce.err2[..]));
-        self.feature_extractor
-            .eval(&mut ts)
-            .expect("Some feature cannot be extracted")
-            .iter()
-            .flat_map(|x| x.to_bits().to_ne_bytes().to_vec())
-            .collect()
+    fn eval(&self, source: &Source) -> Vec<u8> {
+        let mut result = vec![];
+        for &passband in self.passbands.iter() {
+            let lc = source.lc(passband);
+            let mut ts = TimeSeries::new(&lc.t[..], &lc.mag[..], Some(&lc.w[..]));
+            self.feature_extractor
+                .eval(&mut ts)
+                .expect("Some feature cannot be extracted")
+                .iter()
+                .for_each(|x| {
+                    let bytes = x.to_bits().to_ne_bytes();
+                    result.extend_from_slice(&bytes);
+                });
+        }
+        result
     }
 
     fn get_names(&self) -> Vec<&str> {
-        self.feature_extractor.get_names()
+        self.names.iter().map(|s| s.as_str()).collect()
     }
 
     fn get_value_path(&self) -> &str {
@@ -72,13 +113,13 @@ impl Dump for FeatureDump {
     }
 }
 
-struct OIDDump {
+struct SIDDump {
     path: String,
 }
 
-impl Dump for OIDDump {
-    fn eval(&self, lce: &LightCurveEntry) -> Vec<u8> {
-        lce.oid.to_ne_bytes().to_vec()
+impl Dump for SIDDump {
+    fn eval(&self, source: &Source) -> Vec<u8> {
+        source.sid.to_ne_bytes().to_vec()
     }
 
     fn get_names(&self) -> Vec<&str> {
@@ -95,20 +136,22 @@ impl Dump for OIDDump {
 }
 
 pub struct Dumper {
+    passbands: Vec<Passband>,
     dumps: Vec<Arc<dyn Dump>>,
     write_caches: Vec<Box<dyn Cache>>,
 }
 
 impl Dumper {
-    pub fn new() -> Self {
+    pub fn new(passbands: &[Passband]) -> Self {
         Self {
+            passbands: passbands.to_vec(),
             dumps: vec![],
             write_caches: vec![],
         }
     }
 
-    pub fn set_oid_writer(&mut self, oid_path: String) -> &mut Self {
-        self.dumps.push(Arc::new(OIDDump { path: oid_path }));
+    pub fn set_oid_writer(&mut self, sid_path: String) -> &mut Self {
+        self.dumps.push(Arc::new(SIDDump { path: sid_path }));
         self
     }
 
@@ -120,6 +163,7 @@ impl Dumper {
         self.dumps.push(Arc::new(FluxDump {
             path: flux_path,
             interpolator,
+            passbands: self.passbands.clone(),
         }));
         self
     }
@@ -130,11 +174,12 @@ impl Dumper {
         name_path: String,
         feature_extractor: FeatureExtractor<f32>,
     ) -> &mut Self {
-        self.dumps.push(Arc::new(FeatureDump {
+        self.dumps.push(Arc::new(FeatureDump::new(
             value_path,
             name_path,
             feature_extractor,
-        }));
+            self.passbands.clone(),
+        )));
         self
     }
 
@@ -150,11 +195,11 @@ impl Dumper {
 
     fn dump_eval_worker(
         dumps: Vec<Arc<dyn Dump>>,
-        receiver: Receiver<LightCurveEntry>,
+        receiver: Receiver<Source>,
         sender: Sender<Vec<Vec<u8>>>,
     ) {
-        while let Ok(lce) = receiver.recv() {
-            let results = dumps.iter().map(|dump| dump.eval(&lce)).collect();
+        while let Ok(source) = receiver.recv() {
+            let results = dumps.iter().map(|dump| dump.eval(&source)).collect();
             sender
                 .send(results)
                 .expect("Cannot send evaluation result to writer");
@@ -173,16 +218,17 @@ impl Dumper {
         }
     }
 
-    fn cache_writer_worker(receiver: Receiver<LightCurveEntry>, cache: Box<dyn Cache>) {
+    fn cache_writer_worker(receiver: Receiver<Source>, cache: Box<dyn Cache>) {
         let mut writer = cache.writer();
 
-        while let Ok(lce) = receiver.recv() {
-            writer.write(&lce);
+        while let Ok(source) = receiver.recv() {
+            writer.write(&source);
         }
     }
 
-    pub fn dump_query_iter(&self, lce_iter: impl Iterator<Item = LightCurveEntry>) {
+    pub fn dump_query_iter(&self, source_iter: impl Iterator<Item = Source>) {
         const CHANNEL_CAP: usize = 1 << 10;
+
         let (dump_eval_sender, dump_eval_receiver) = bounded_channel(CHANNEL_CAP);
         let (dump_writer_sender, dump_writer_receiver) = bounded_channel(CHANNEL_CAP);
         let (cache_writer_senders, cache_writer_receivers): (Vec<_>, Vec<_>) = self
@@ -217,21 +263,17 @@ impl Dumper {
             })
             .collect();
 
-        lce_iter
-            .inspect(|lce| {
-                for sender in cache_writer_senders.iter() {
-                    sender
-                        .send(lce.clone())
-                        .expect("Cannot send task to cache worker");
-                }
-            })
-            .filter(|lce| lce.t.len() >= MIN_NUMBER_OF_OBSERVATIONS)
-            // Send light curve to eval worker pool
-            .for_each(|lce| {
-                dump_eval_sender
-                    .send(lce)
-                    .expect("Cannot send task to eval worker");
-            });
+        for source in source_iter {
+            for sender in cache_writer_senders.iter() {
+                sender
+                    .send(source.clone())
+                    .expect("Cannot send task to cache worker");
+            }
+            // Send source to eval worker pool
+            dump_eval_sender
+                .send(source)
+                .expect("Cannot send task to eval worker");
+        }
 
         // Remove sender or writer_thread will never join
         drop(dump_eval_sender);

@@ -1,3 +1,4 @@
+use crate::lc::Passband;
 use base64;
 use clap::{App, Arg, ArgMatches};
 use md5;
@@ -16,7 +17,7 @@ pub fn arg_matches() -> ArgMatches<'static> {
         .arg(Arg::with_name("sql_query").required(true).index(2).help(
             "SQL query to be sent to DB\
                 Must return a response with these columns in this particular order:\
-                oid, mag, mjd, magerr",
+                sid, mjd, filter, mag, magerr",
         ))
         .arg(
             Arg::with_name("connection_config")
@@ -41,7 +42,7 @@ pub fn arg_matches() -> ArgMatches<'static> {
                 .takes_value(true)
                 .default_value("")
                 .help(
-                    "Filename suffix, output filenames will be like <dir_output>/oid<suffix>.dat",
+                    "Filename suffix, output filenames will be like <dir_output>/sid<suffix>.dat",
                 ),
         )
         .arg(
@@ -50,8 +51,15 @@ pub fn arg_matches() -> ArgMatches<'static> {
                 .takes_value(false)
                 .help(
                     "Each input light curve is sorted by its 'mjd'.\
-                    Note that this tool never groups light curves by oid, it must be done by DB",
+                    Note that this tool never groups light curves by sid, it must be done by DB",
                 ),
+        )
+        .arg(
+            Arg::with_name("passbands")
+                .long("passbands")
+                .takes_value(true)
+                .default_value("gr")
+                .help("Passbands to use"),
         )
         .arg(
             Arg::with_name("interpolate")
@@ -77,10 +85,10 @@ pub fn arg_matches() -> ArgMatches<'static> {
                 ),
         )
         .arg(
-            Arg::with_name("no_oid")
-                .long("no-oid")
+            Arg::with_name("no_sid")
+                .long("no-sid")
                 .takes_value(false)
-                .help("Do not output oid data file"),
+                .help("Do not output sid data file"),
         )
         .get_matches()
 }
@@ -94,7 +102,8 @@ pub struct Config {
     pub sql_query: String,
     pub connection_config: String,
     pub light_curves_are_sorted: bool,
-    pub oid_path: Option<String>,
+    pub passbands: Vec<Passband>,
+    pub sid_path: Option<String>,
     pub interpolation_config: Option<InterpolationConfig>,
     pub feature_config: Option<FeatureConfig>,
     pub cache_config: Option<CacheConfig>,
@@ -114,17 +123,22 @@ impl Config {
         output_dir: &str,
         suffix: &str,
         light_curves_are_sorted: bool,
+        passbands_str: &str,
         interpolation_enabled: bool,
         features_enabled: bool,
         cache_dir: Option<&str>,
-        no_oid: bool,
+        no_sid: bool,
     ) -> Self {
         let database = match database_type {
             "clickhouse" => DataBase::ClickHouse,
             _ => panic!("only clickhouse database is supported"),
         };
-        let oid_path = match !no_oid {
-            true => Some(Self::get_path(output_dir, "oid", suffix, ".dat")),
+        let passbands = passbands_str
+            .chars()
+            .map(|c| c.to_string().into())
+            .collect();
+        let sid_path = match !no_sid {
+            true => Some(Self::get_path(output_dir, "sid", suffix, ".dat")),
             false => None,
         };
         let interpolation_config = if interpolation_enabled {
@@ -158,7 +172,8 @@ impl Config {
             sql_query: String::from(sql_query),
             connection_config: String::from(connection_config),
             light_curves_are_sorted,
-            oid_path,
+            passbands,
+            sid_path,
             interpolation_config,
             feature_config,
             cache_config,
@@ -172,13 +187,14 @@ impl Config {
         let output_dir = matches.value_of("dir_output").unwrap();
         let suffix = matches.value_of("suffix").unwrap();
         let light_curves_are_sorted = matches.is_present("light_curves_are_sorted");
+        let passbands = matches.value_of("passbands").unwrap();
         let interpolation_enabled = matches.is_present("interpolate");
         let features_enabled = matches.is_present("features");
         let cache_dir = matches.value_of("cache_dir").map(|s| match s {
             "-" => output_dir,
             _ => s,
         });
-        let no_oid = matches.is_present("no_oid");
+        let no_sid = matches.is_present("no_sid");
         Self::new(
             database,
             sql_query,
@@ -186,10 +202,11 @@ impl Config {
             output_dir,
             suffix,
             light_curves_are_sorted,
+            passbands,
             interpolation_enabled,
             features_enabled,
             cache_dir,
-            no_oid,
+            no_sid,
         )
     }
 }

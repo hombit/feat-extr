@@ -571,7 +571,6 @@ dependencies = [
  "num-traits",
  "num_cpus",
  "rand",
- "unzip3",
 ]
 
 [[package]]
@@ -915,9 +914,9 @@ checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
 
 [[package]]
 name = "light-curve-common"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f0e40a106910687115ee14db19340b88a6622366419c316a9b4ee8cb367c133"
+checksum = "22316202ecf841d96b36e9bedd598ff2190ed42a9d5dae52e731277afe83ddb2"
 dependencies = [
  "conv",
  "num-traits",
