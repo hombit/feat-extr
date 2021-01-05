@@ -1,10 +1,12 @@
 use hdf5::H5Type;
 use light_curve_common::sort_multiple;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use std::fmt;
 
 pub const MJD0: f64 = 58000.0;
 
-#[derive(H5Type, Copy, Clone)]
+#[derive(FromPrimitive, H5Type, Copy, Clone)]
 #[repr(u8)]
 pub enum Passband {
     G = 1,
@@ -13,38 +15,24 @@ pub enum Passband {
 }
 
 impl Passband {
-    fn lcs_index(&self) -> usize {
-        match self {
-            Self::G => 0,
-            Self::R => 1,
-            Self::I => 2,
-        }
+    pub const fn n_filters() -> usize {
+        3
+    }
+
+    fn lcs_index(self) -> usize {
+        self as usize - 1
     }
 
     pub fn from_lcs_index(i: usize) -> Self {
-        match i {
-            0 => Self::G,
-            1 => Self::R,
-            2 => Self::I,
-            _ => panic!("unknown lcs index {}", i),
-        }
+        FromPrimitive::from_usize(i + 1).expect("lcs index should is 0, 1 or 2")
     }
 
-    pub fn code(&self) -> u8 {
-        match self {
-            Self::G => 1,
-            Self::R => 2,
-            Self::I => 3,
-        }
+    pub fn code(self) -> u8 {
+        self as u8
     }
 
     pub fn from_code(code: u8) -> Self {
-        match code {
-            1 => Self::G,
-            2 => Self::R,
-            3 => Self::I,
-            _ => panic!("unknown filter code {}", code),
-        }
+        FromPrimitive::from_u8(code).expect("code should be 1, 2 or 3")
     }
 }
 
@@ -73,7 +61,7 @@ impl From<String> for Passband {
 #[derive(Clone)]
 pub struct Source {
     pub sid: u64,
-    pub lcs: [LightCurve; 3],
+    pub lcs: [LightCurve; Passband::n_filters()],
 }
 
 impl Source {
@@ -147,4 +135,23 @@ pub struct Observation {
     pub mag: f32,
     pub w: f32,
     pub passband: Passband,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn passband_from_lcs_indix_valid() {
+        for i in 0..Passband::n_filters() {
+            let _passband = Passband::from_lcs_index(i);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn passband_from_lcs_indix_panic() {
+        let i = Passband::n_filters();
+        let _passband = Passband::from_lcs_index(i);
+    }
 }
