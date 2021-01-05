@@ -1,5 +1,5 @@
 use crate::lc::{LightCurve, Observation, Source};
-use dyn_clone::DynClone;
+use dyn_clonable::*;
 
 pub trait SourceDataBase<'a> {
     type Query: IntoIterator<Item = Observation>;
@@ -7,14 +7,16 @@ pub trait SourceDataBase<'a> {
     fn query(&'a mut self, query: &str) -> Self::Query;
 }
 
-pub trait Dump: Send + Sync {
+#[clonable]
+pub trait Dump: Clone + Send + Sync {
     fn eval(&self, source: &Source) -> Vec<u8>;
     fn get_names(&self) -> Vec<&str>;
     fn get_value_path(&self) -> &str;
     fn get_name_path(&self) -> Option<&str>;
 }
 
-pub trait Cache: DynClone + Send {
+#[clonable]
+pub trait Cache: Clone + Send {
     fn reader(&self) -> Box<dyn Iterator<Item = Source>>;
     fn writer(&self) -> Box<dyn CacheWriter>;
 }

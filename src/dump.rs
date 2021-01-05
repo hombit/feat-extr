@@ -1,17 +1,15 @@
 use crate::lc::{Passband, Source};
 use crate::traits::*;
 use crossbeam::channel::{bounded as bounded_channel, Receiver, Sender};
-use dyn_clone::clone_box;
 use light_curve_feature::{time_series::TimeSeries, FeatureEvaluator, FeatureExtractor};
 use light_curve_interpol::Interpolator;
 use num_cpus;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::iter::Iterator;
-use std::ops::Deref;
-use std::sync::Arc;
 use std::thread;
 
+#[derive(Clone)]
 struct FluxDump {
     path: String,
     interpolator: Interpolator<f32, f32>,
@@ -48,6 +46,7 @@ impl Dump for FluxDump {
     }
 }
 
+#[derive(Clone)]
 struct FeatureDump {
     value_path: String,
     name_path: String,
@@ -132,6 +131,7 @@ impl Dump for FeatureDump {
     }
 }
 
+#[derive(Clone)]
 struct SIDDump {
     path: String,
 }
@@ -156,7 +156,7 @@ impl Dump for SIDDump {
 
 pub struct Dumper {
     passbands: Vec<Passband>,
-    dumps: Vec<Arc<dyn Dump>>,
+    dumps: Vec<Box<dyn Dump + 'static>>,
     write_caches: Vec<Box<dyn Cache>>,
 }
 
@@ -170,7 +170,7 @@ impl Dumper {
     }
 
     pub fn set_sid_writer(&mut self, sid_path: String) -> &mut Self {
-        self.dumps.push(Arc::new(SIDDump { path: sid_path }));
+        self.dumps.push(Box::new(SIDDump { path: sid_path }));
         self
     }
 
@@ -179,7 +179,7 @@ impl Dumper {
         flux_path: String,
         interpolator: Interpolator<f32, f32>,
     ) -> &mut Self {
-        self.dumps.push(Arc::new(FluxDump {
+        self.dumps.push(Box::new(FluxDump {
             path: flux_path,
             interpolator,
             passbands: self.passbands.clone(),
@@ -194,7 +194,7 @@ impl Dumper {
         magn_feature_extractor: FeatureExtractor<f32>,
         flux_feature_extractor: FeatureExtractor<f32>,
     ) -> &mut Self {
-        self.dumps.push(Arc::new(FeatureDump::new(
+        self.dumps.push(Box::new(FeatureDump::new(
             value_path,
             name_path,
             magn_feature_extractor,
@@ -215,7 +215,7 @@ impl Dumper {
     }
 
     fn dump_eval_worker(
-        dumps: Vec<Arc<dyn Dump>>,
+        dumps: Vec<Box<dyn Dump>>,
         receiver: Receiver<Source>,
         sender: Sender<Vec<Vec<u8>>>,
     ) {
@@ -227,7 +227,7 @@ impl Dumper {
         }
     }
 
-    fn dump_writer_worker(dumps: Vec<Arc<dyn Dump>>, receiver: Receiver<Vec<Vec<u8>>>) {
+    fn dump_writer_worker(dumps: Vec<Box<dyn Dump>>, receiver: Receiver<Vec<Vec<u8>>>) {
         let mut writers: Vec<_> = dumps
             .iter()
             .map(|dump| Self::writer_from_path(dump.get_value_path()))
@@ -277,7 +277,7 @@ impl Dumper {
         let cache_write_thread_pool: Vec<_> = self
             .write_caches
             .iter()
-            .map(|cache| clone_box(cache.deref()))
+            .map(|cache| cache.clone())
             .zip(cache_writer_receivers.into_iter())
             .map(|(cache, receiver)| {
                 thread::spawn(move || Self::cache_writer_worker(receiver, cache))

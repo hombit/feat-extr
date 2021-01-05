@@ -558,7 +558,7 @@ dependencies = [
  "clickhouse-rs",
  "conv",
  "crossbeam",
- "dyn-clone",
+ "dyn-clonable",
  "fallible-iterator",
  "futures-util",
  "hdf5",
@@ -944,9 +944,9 @@ dependencies = [
 
 [[package]]
 name = "light-curve-interpol"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fa364210c2bc9a24fb97a8f58fc29590e40d33e39964b2e06cc8f5dbc8630b5"
+checksum = "21ecb5c8ad03e8da771c85aa647c62ee708330fd33b4f49724af7062b2f94146"
 dependencies = [
  "conv",
  "num-traits",

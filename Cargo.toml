@@ -9,7 +9,7 @@ lto = true
 codegen-units = 1
 
 [dependencies]
-light-curve-interpol = "0.1.0"
+light-curve-interpol = "0.1.1"
 light-curve-common = "0.1.1"
 fallible-iterator = "^0.2.0"
 num-traits = "^0.2.0"
@@ -24,7 +24,7 @@ async-std = "^1.4.0"
 md5 = "^0.7.0"
 hdf5 = "^0.7.0"
 ndarray = "^0.13"
-dyn-clone = "^1.0.2"
+dyn-clonable = "^0.9"
 base64 = "^0.12.2"
 
 [dependencies.light-curve-feature]
