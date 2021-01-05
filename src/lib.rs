@@ -73,8 +73,8 @@ impl NyquistFreq<f32> for TruncQuantileNyquistFreq {
 pub fn run(config: Config) {
     let mut dumper = Dumper::new(&config.passbands);
 
-    if let Some(oid_path) = config.sid_path {
-        dumper.set_oid_writer(oid_path.clone());
+    if let Some(sid_path) = config.sid_path {
+        dumper.set_sid_writer(sid_path.clone());
     }
 
     if let Some(ic) = &config.interpolation_config {

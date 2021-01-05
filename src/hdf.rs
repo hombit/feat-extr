@@ -107,18 +107,19 @@ impl Hdf5CacheWriter {
 
 impl CacheWriter for Hdf5CacheWriter {
     fn write(&mut self, source: &Source) {
+        let observations: Vec<_> = source.iter_observations().collect();
+
         let begin = self.index;
-        self.index += source.len();
+        self.index += observations.len();
         if self.index >= self.size {
             while self.size <= self.index {
                 self.size += DATASET_SIZE_STEP;
             }
             self.dataset.resize(self.size).unwrap();
         }
-        for (i, obs) in source.iter_observations().enumerate() {
-            let slice = ndarray::s![begin + i..begin + i + 1];
-            self.dataset.write_slice(&[obs], &slice).unwrap();
-        }
+
+        let slice = ndarray::s![begin..begin + observations.len()];
+        self.dataset.write_slice(&observations, &slice).unwrap();
     }
 }
 

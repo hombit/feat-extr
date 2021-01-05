@@ -67,19 +67,22 @@ impl FeatureDump {
     ) -> Self {
         let magn_feature_extractor_names = magn_feature_extractor.get_names();
         let flux_feature_extractor_names = flux_feature_extractor.get_names();
-        let names = [
-            (magn_feature_extractor_names, "magn"),
-            (flux_feature_extractor_names, "flux"),
-        ]
-        .iter()
-        .flat_map(|(feature_extractor_names, brightness_type)| {
-            passbands.iter().flat_map(move |&passband| {
-                feature_extractor_names
-                    .iter()
-                    .map(move |name| format!("{}_{}_{}", name, brightness_type, passband))
+        let extr_names_types = [
+            (&magn_feature_extractor_names, "magn"),
+            (&flux_feature_extractor_names, "flux"),
+        ];
+        let names = passbands
+            .iter()
+            .flat_map(|passband| {
+                extr_names_types.iter().flat_map(
+                    move |(feature_extractor_names, brightness_type)| {
+                        feature_extractor_names
+                            .iter()
+                            .map(move |name| format!("{}_{}_{}", name, brightness_type, passband))
+                    },
+                )
             })
-        })
-        .collect();
+            .collect();
         Self {
             value_path,
             name_path,
@@ -97,8 +100,8 @@ impl Dump for FeatureDump {
         for &passband in self.passbands.iter() {
             let lc = source.lc(passband);
             let flux: Vec<_> = lc.mag.iter().map(|&x| 10_f32.powf(-0.4 * x)).collect();
-            let ts_magn = TimeSeries::new(&lc.t[..], &lc.mag[..], Some(&lc.w[..]));
-            let ts_flux = TimeSeries::new(&lc.t[..], &flux, Some(&lc.w[..]));
+            let ts_magn = TimeSeries::new(&lc.t, &lc.mag, Some(&lc.w));
+            let ts_flux = TimeSeries::new(&lc.t, &flux, Some(&lc.w));
             for (feature_extractor, ts) in &mut [
                 (&self.magn_feature_extractor, ts_magn),
                 (&self.flux_feature_extractor, ts_flux),
@@ -166,7 +169,7 @@ impl Dumper {
         }
     }
 
-    pub fn set_oid_writer(&mut self, sid_path: String) -> &mut Self {
+    pub fn set_sid_writer(&mut self, sid_path: String) -> &mut Self {
         self.dumps.push(Arc::new(SIDDump { path: sid_path }));
         self
     }
@@ -258,9 +261,9 @@ impl Dumper {
         let dump_eval_thread_pool: Vec<_> = (0..num_cpus::get())
             .map(|_| {
                 let dumps = self.dumps.clone();
-                let reciever = dump_eval_receiver.clone();
+                let receiver = dump_eval_receiver.clone();
                 let sender = dump_writer_sender.clone();
-                thread::spawn(move || Self::dump_eval_worker(dumps, reciever, sender))
+                thread::spawn(move || Self::dump_eval_worker(dumps, receiver, sender))
             })
             .collect();
         // Remove channel parts that are cloned and moved to workers
@@ -293,7 +296,7 @@ impl Dumper {
                 .expect("Cannot send task to eval worker");
         }
 
-        // Remove sender or writer_thread will never join
+        // Remove senders or writer_thread will never join
         drop(dump_eval_sender);
         drop(cache_writer_senders);
         for thread in dump_eval_thread_pool {

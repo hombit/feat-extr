@@ -10,7 +10,7 @@ cargo run --release -- \
       FROM ztf.dr4_source_obs_1
       WHERE sid IN (SELECT sid
         FROM ztf.dr4_source_meta_1
-        WHERE nobs_g >= 121 AND nobs_r >= 121
+        WHERE nobs_g >= 4 AND nobs_r >= 4
       )
       ORDER BY h3index10, sid, mjd
 
