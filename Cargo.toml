@@ -4,6 +4,9 @@ version = "0.3.0"
 authors = ["Konstantin Malanchev <hombit@gmail.com>"]
 edition = "2018"
 
+[build]
+rustflags = "-C target-cpu=native"
+
 [profile.release]
 lto = true
 codegen-units = 1
