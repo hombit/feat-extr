@@ -4,7 +4,7 @@ NAME="test"
 
 SUFFIX="_${NAME}"
 
-cargo run --release -- \
+RUSTFLAGS="-Ctarget-cpu=native" cargo run --release -- \
     clickhouse \
     "SELECT sid, mjd, filter, mag, magerr
       FROM ztf.dr4_source_obs_1
