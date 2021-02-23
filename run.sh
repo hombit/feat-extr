@@ -18,5 +18,5 @@ cargo run --release -- \
     --suffix=${SUFFIX} \
     --connect="tcp://default@localhost:9000/ztf" \
     --sorted \
-    --features \
-    --cache=-
+    --features # \
+    # --cache=-

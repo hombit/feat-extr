@@ -80,7 +80,7 @@ pub fn arg_matches() -> ArgMatches<'static> {
                 .long("cache")
                 .takes_value(true)
                 .help(
-                    "When specified, the DB response is cached the given directory, \
+                    "When specified, the DB response is cached to the given directory, \
                     use '-' to cache into <dir_output>",
                 ),
         )
