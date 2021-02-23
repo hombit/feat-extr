@@ -1,22 +1,26 @@
 #!/bin/bash
 
-NAME="test"
+HOST=$1
+DIR=$2
+MINNOBS=$3
 
+NAME="short_gr_${MINNOBS}"
 SUFFIX="_${NAME}"
 
 RUSTFLAGS="-Ctarget-cpu=native" cargo run --release -- \
     clickhouse \
     "SELECT sid, mjd, filter, mag, magerr
-      FROM ztf.dr4_source_obs_1
+      FROM ztf.dr4_source_obs_02
       WHERE sid IN (SELECT sid
-        FROM ztf.dr4_source_meta_1
-        WHERE nobs_g >= 4 AND nobs_r >= 4
+        FROM ztf.dr4_source_meta_short_02
+        WHERE nobs_g >= ${MINNOBS} AND nobs_r >= ${MINNOBS}
       )
-      ORDER BY h3index10, sid, mjd
+      ORDER BY sid, mjd
 
 " \
+    --dir=${DIR} \
     --suffix=${SUFFIX} \
-    --connect="tcp://default@localhost:9000/ztf" \
+    --connect="tcp://default@${HOST}:9000/ztf" \
     --sorted \
     --features # \
     # --cache=-
