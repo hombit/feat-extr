@@ -1,9 +1,13 @@
 use crate::lc::Passband;
-use base64;
 use clap::{App, Arg, ArgMatches};
-use md5;
-use std::ops::Deref;
 use std::path::Path;
+
+#[cfg(feature = "hdf")]
+use base64;
+#[cfg(feature = "hdf")]
+use md5;
+#[cfg(feature = "hdf")]
+use std::ops::Deref;
 
 pub fn arg_matches() -> ArgMatches<'static> {
     App::new("Query light curves and extrac features")

@@ -157,6 +157,7 @@ impl Dump for SIDDump {
 pub struct Dumper {
     passbands: Vec<Passband>,
     dumps: Vec<Box<dyn Dump + 'static>>,
+    #[cfg(feature = "hdf")]
     write_caches: Vec<Box<dyn Cache>>,
 }
 
@@ -165,6 +166,7 @@ impl Dumper {
         Self {
             passbands: passbands.to_vec(),
             dumps: vec![],
+            #[cfg(feature = "hdf")]
             write_caches: vec![],
         }
     }
@@ -204,6 +206,7 @@ impl Dumper {
         self
     }
 
+    #[cfg(feature = "hdf")]
     pub fn set_write_cache(&mut self, cache: Box<dyn Cache>) -> &mut Self {
         self.write_caches.push(cache);
         self
@@ -239,6 +242,7 @@ impl Dumper {
         }
     }
 
+    #[cfg(feature = "hdf")]
     fn cache_writer_worker(receiver: Receiver<Source>, cache: Box<dyn Cache>) {
         let mut writer = cache.writer();
 
@@ -252,6 +256,7 @@ impl Dumper {
 
         let (dump_eval_sender, dump_eval_receiver) = bounded_channel(CHANNEL_CAP);
         let (dump_writer_sender, dump_writer_receiver) = bounded_channel(CHANNEL_CAP);
+        #[cfg(feature = "hdf")]
         let (cache_writer_senders, cache_writer_receivers): (Vec<_>, Vec<_>) = self
             .write_caches
             .iter()
@@ -274,6 +279,7 @@ impl Dumper {
         let dump_writer_thread =
             thread::spawn(move || Self::dump_writer_worker(dumps, dump_writer_receiver));
 
+        #[cfg(feature = "hdf")]
         let cache_write_thread_pool: Vec<_> = self
             .write_caches
             .iter()
@@ -285,6 +291,7 @@ impl Dumper {
             .collect();
 
         for source in source_iter {
+            #[cfg(feature = "hdf")]
             for sender in cache_writer_senders.iter() {
                 sender
                     .send(source.clone())
@@ -298,6 +305,7 @@ impl Dumper {
 
         // Remove senders or writer_thread will never join
         drop(dump_eval_sender);
+        #[cfg(feature = "hdf")]
         drop(cache_writer_senders);
         for thread in dump_eval_thread_pool {
             thread.join().expect("Dumper eval worker panicked");
@@ -305,6 +313,7 @@ impl Dumper {
         dump_writer_thread
             .join()
             .expect("Dumper writer worker panicked");
+        #[cfg(feature = "hdf")]
         for thread in cache_write_thread_pool {
             thread.join().expect("Dumper cache writer worker panicked");
         }

@@ -1,8 +1,12 @@
 use light_curve_common::linspace;
 use light_curve_feature::*;
 use light_curve_interpol::Interpolator;
+
+#[cfg(feature = "hdf")]
 use std::fs::File;
+#[cfg(feature = "hdf")]
 use std::io::Write;
+#[cfg(feature = "hdf")]
 use std::path::Path;
 
 pub mod ch;
@@ -22,7 +26,9 @@ use hdf::Hdf5Cache;
 mod lc;
 
 mod traits;
-use traits::{Cache, ObservationsToSources, SourceDataBase};
+#[cfg(feature = "hdf")]
+use traits::Cache;
+use traits::{ObservationsToSources, SourceDataBase};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
