@@ -8,7 +8,7 @@ pub trait SourceDataBase<'a> {
 }
 
 #[clonable]
-pub trait Dump: Clone + Send + Sync {
+pub trait Dump: Clone + Send {
     fn eval(&self, source: &Source) -> Vec<u8>;
     fn get_names(&self) -> Vec<&str>;
     fn get_value_path(&self) -> &str;

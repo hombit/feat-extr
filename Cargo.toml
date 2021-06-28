@@ -23,19 +23,19 @@ futures-util = "^0.3.0"
 async-std = "^1.4.0"
 md5 = "^0.7.0"
 hdf5 = "^0.7.0"
-ndarray = "^0.13"
+ndarray = "^0.14"
 dyn-clonable = "^0.9"
 base64 = "^0.12.2"
 
 [dependencies.light-curve-feature]
-version = "0.2.0"
-#default-features = false
-#features = ["fftw-mkl"]
+version = "0.2.2"
+default-features = false
+features = ["fftw-system"]
 
 [dependencies.clickhouse-rs]
 git="https://github.com/suharev7/clickhouse-rs/"
-rev="6c822edcdaff950e28cfdbad0628708e2da57113"
-# branch="async-await"
+rev="68d9e55dfe38d0af276d61003563e54b3dce7f1c"
+#version = "1.0.0-alpha.1"
 default-features = false
 features = ["async_std"]
 
