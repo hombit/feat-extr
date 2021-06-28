@@ -110,7 +110,7 @@ pub fn run(config: Config) {
             LinearFit::default(),
             LinearTrend::default(),
             MagnitudePercentageRatio::new(0.4, 0.05), // default
-            MagnitudePercentageRatio::new(0.2, 0.1),
+            MagnitudePercentageRatio::new(0.2, 0.05),
             MaximumSlope::default(),
             Mean::default(),
             MedianAbsoluteDeviation::default(),
