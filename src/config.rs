@@ -156,6 +156,8 @@ impl Config {
         } else {
             None
         };
+
+        #[cfg(feature = "hdf")]
         let cache_config = cache_dir.map(|dir| {
             let query_hash = base64::encode(md5::compute(sql_query).deref());
             let suffix = "_".to_owned() + &query_hash[..8];
@@ -167,6 +169,11 @@ impl Config {
                 data_path,
             }
         });
+        #[cfg(not(feature = "hdf"))]
+        let cache_config = cache_dir.map(|_| {
+            panic!("the application is built without hdf support, caching cannot be used")
+        });
+
         Self {
             database,
             sql_query: String::from(sql_query),

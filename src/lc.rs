@@ -1,4 +1,6 @@
+#[cfg(feature = "hdf")]
 use hdf5::H5Type;
+
 use light_curve_common::sort_multiple;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -6,7 +8,8 @@ use std::fmt;
 
 pub const MJD0: f64 = 58000.0;
 
-#[derive(FromPrimitive, H5Type, Copy, Clone)]
+#[derive(FromPrimitive, Copy, Clone)]
+#[cfg_attr(feature = "hdf", derive(H5Type))]
 #[repr(u8)]
 pub enum Passband {
     G = 1,
@@ -127,7 +130,8 @@ impl LightCurve {
     }
 }
 
-#[derive(H5Type, Clone)]
+#[derive(Clone)]
+#[cfg_attr(feature = "hdf", derive(H5Type))]
 #[repr(C)]
 pub struct Observation {
     pub sid: u64,

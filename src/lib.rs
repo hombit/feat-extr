@@ -14,7 +14,9 @@ use config::{Config, DataBase};
 mod dump;
 use dump::Dumper;
 
+#[cfg(feature = "hdf")]
 mod hdf;
+#[cfg(feature = "hdf")]
 use hdf::Hdf5Cache;
 
 mod lc;
@@ -73,7 +75,7 @@ impl NyquistFreq<f32> for TruncQuantileNyquistFreq {
 pub fn run(config: Config) {
     let mut dumper = Dumper::new(&config.passbands);
 
-    if let Some(sid_path) = config.sid_path {
+    if let Some(ref sid_path) = config.sid_path {
         dumper.set_sid_writer(sid_path.clone());
     }
 
@@ -147,6 +149,13 @@ pub fn run(config: Config) {
         );
     }
 
+    dump_data(&mut dumper, &config);
+
+    dumper.write_names();
+}
+
+#[cfg(feature = "hdf")]
+fn dump_data(dumper: &mut Dumper, config: &Config) {
     let read_cache = match &config.cache_config {
         Some(cc) => {
             let cache = Box::new(Hdf5Cache {
@@ -174,15 +183,22 @@ pub fn run(config: Config) {
         Some(cache) => {
             dumper.dump_query_iter(cache.reader());
         }
-        None => match config.database {
-            DataBase::ClickHouse => {
-                let mut source_db = CHSourceDataBase::new(&config.connection_config);
-                let query = source_db.query(&config.sql_query);
-                let source_iter = query.into_iter().sources(config.light_curves_are_sorted);
-                dumper.dump_query_iter(source_iter);
-            }
-        },
+        None => dump_from_db(dumper, config),
     }
+}
 
-    dumper.write_names();
+#[cfg(not(feature = "hdf"))]
+fn dump_data(dumper: &mut Dumper, config: &Config) {
+    dump_from_db(dumper, config);
+}
+
+fn dump_from_db(dumper: &mut Dumper, config: &Config) {
+    match config.database {
+        DataBase::ClickHouse => {
+            let mut source_db = CHSourceDataBase::new(&config.connection_config);
+            let query = source_db.query(&config.sql_query);
+            let source_iter = query.into_iter().sources(config.light_curves_are_sorted);
+            dumper.dump_query_iter(source_iter);
+        }
+    }
 }
