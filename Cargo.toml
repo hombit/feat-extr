@@ -30,7 +30,7 @@ base64 = "^0.12.2"
 [dependencies.light-curve-feature]
 version = "0.2.2"
 default-features = false
-features = ["fftw-system"]
+features = ["fftw-mkl"]
 
 [dependencies.clickhouse-rs]
 git="https://github.com/suharev7/clickhouse-rs/"
