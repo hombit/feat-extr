@@ -7,7 +7,7 @@ MINNOBS=$3
 NAME="extragal_short_gr_${MINNOBS}"
 SUFFIX="_${NAME}"
 
-RUSTFLAGS="-Ctarget-cpu=native" cargo run --release -- \
+RUSTFLAGS="-Ctarget-cpu=native" cargo run --release --no-default-features --features fftw-mkl -- \
     clickhouse \
     "SELECT sid, mjd, filter, mag, magerr
       FROM ztf.dr4_source_obs_02
