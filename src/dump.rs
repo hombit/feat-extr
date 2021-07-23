@@ -98,9 +98,14 @@ impl Dump for FeatureDump {
         let mut result = vec![];
         for &passband in self.passbands.iter() {
             let lc = source.lc(passband);
-            let flux: Vec<_> = lc.mag.iter().map(|&x| 10_f32.powf(-0.4 * x)).collect();
+            let flux: Vec<_> = lc.mag.iter().map(|&m| 10_f32.powf(-0.4 * m)).collect();
+            let flux_weight: Vec<_> = flux
+                .iter()
+                .zip(lc.w.iter())
+                .map(|(f, w_m)| w_m / f32::powi(0.4 * f32::ln(10.0) * f, 2))
+                .collect();
             let ts_magn = TimeSeries::new(&lc.t, &lc.mag, Some(&lc.w));
-            let ts_flux = TimeSeries::new(&lc.t, &flux, Some(&lc.w));
+            let ts_flux = TimeSeries::new(&lc.t, &flux, Some(&flux_weight));
             for (feature_extractor, ts) in &mut [
                 (&self.magn_feature_extractor, ts_magn),
                 (&self.flux_feature_extractor, ts_flux),
