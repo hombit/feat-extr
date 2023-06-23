@@ -1,7 +1,7 @@
 use crate::lc::{Passband, Source};
 use crate::traits::*;
 use crossbeam::channel::{bounded as bounded_channel, Receiver, Sender};
-use light_curve_feature::{TimeSeries, FeatureEvaluator, FeatureNamesDescriptionsTrait, Feature};
+use light_curve_feature::{Feature, FeatureEvaluator, FeatureNamesDescriptionsTrait, TimeSeries};
 use light_curve_interpol::Interpolator;
 use num_cpus;
 use std::fs::File;

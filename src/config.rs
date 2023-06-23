@@ -1,4 +1,6 @@
 use crate::lc::Passband;
+
+use base64::Engine;
 use clap::{App, Arg, ArgMatches};
 use std::path::Path;
 
@@ -163,7 +165,8 @@ impl Config {
 
         #[cfg(feature = "hdf")]
         let cache_config = cache_dir.map(|dir| {
-            let query_hash = base64::encode(md5::compute(sql_query).deref());
+            let query_hash =
+                base64::engine::general_purpose::STANDARD.encode(md5::compute(sql_query).deref());
             let suffix = "_".to_owned() + &query_hash[..8];
             let query_path = Self::get_path(dir, database_type, &suffix, ".sql");
             let data_path = Self::get_path(dir, database_type, &suffix, ".hdf5");

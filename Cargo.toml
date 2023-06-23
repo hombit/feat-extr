@@ -18,22 +18,21 @@ hdf = ["hdf5"]
 light-curve-common = "0.1.1"
 light-curve-interpol = "0.1.1"
 light-curve-feature = { version = "0.5.5", default-features = false }
-fallible-iterator = "^0.2.0"
-num-traits = "^0.2.0"
-num-derive = "^0.2.0"
-conv = "^0.3.2"
-clap = "^2.33"
-itertools = "^0.8.0"
-num_cpus = "^1.10"
-crossbeam = "^0.7.3"
-futures-util = "^0.3.0"
-async-std = "^1.4.0"
-md5 = "^0.7.0"
-#hdf5 = { version = "^0.8.1", optional = true }
+num-traits = "0.2.15"
+num-derive = "0.3.3"
+conv = "0.3.2"
+clap = "^2.34"
+itertools = "0.10.5"
+num_cpus = "1.10"
+crossbeam = "0.8.2"
+futures-util = "0.3.0"
+async-std = "1.4.0"
+md5 = "0.7.0"
+#hdf5 = { version = "0.8.1", optional = true }
 # hdf5 0.14 support:
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust", optional = true, rev = "26046fb4900ec38afd2a1c0494cff688b288662e" }
-dyn-clonable = "^0.9"
-base64 = "^0.12.2"
+dyn-clonable = "0.9"
+base64 = "0.21.2"
 
 [dependencies.clickhouse-rs]
 git="https://github.com/suharev7/clickhouse-rs/"

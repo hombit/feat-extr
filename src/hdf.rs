@@ -120,7 +120,9 @@ impl CacheWriter for Hdf5CacheWriter {
             self.dataset.resize(self.size).unwrap();
         }
 
-        let selection: hdf5::Selection = ndarray::s![begin..begin + observations.len()].try_into().unwrap();
+        let selection: hdf5::Selection = ndarray::s![begin..begin + observations.len()]
+            .try_into()
+            .unwrap();
         self.dataset.write_slice(&observations, &selection).unwrap();
     }
 }
