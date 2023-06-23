@@ -36,7 +36,7 @@ base64 = "0.21.2"
 
 [dependencies.clickhouse-rs]
 git="https://github.com/suharev7/clickhouse-rs/"
-rev="68d9e55dfe38d0af276d61003563e54b3dce7f1c"
+rev="ecf28f46774773f39c74ee5213ad1e3ea240739b"
 #version = "1.0.0-alpha.1"
 default-features = false
 features = ["async_std"]
