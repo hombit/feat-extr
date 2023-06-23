@@ -1,4 +1,4 @@
-FROM rust:1.46-buster AS build
+FROM rust:1.70-buster AS build
 
 ENV RUSTFLAGS "-C target-cpu=native"
 

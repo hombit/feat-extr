@@ -30,54 +30,6 @@ mod traits;
 use traits::Cache;
 use traits::{ObservationsToSources, SourceDataBase};
 
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-struct TruncMedianNyquistFreq {
-    m: MedianNyquistFreq,
-    max_freq: f32,
-}
-
-#[allow(dead_code)]
-impl TruncMedianNyquistFreq {
-    fn new(min_dt: f32) -> Self {
-        Self {
-            m: MedianNyquistFreq,
-            max_freq: std::f32::consts::PI / min_dt,
-        }
-    }
-}
-
-#[allow(dead_code)]
-impl NyquistFreq<f32> for TruncMedianNyquistFreq {
-    fn nyquist_freq(&self, t: &[f32]) -> f32 {
-        f32::min(self.m.nyquist_freq(t), self.max_freq)
-    }
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-struct TruncQuantileNyquistFreq {
-    q: QuantileNyquistFreq,
-    max_freq: f32,
-}
-
-#[allow(dead_code)]
-impl TruncQuantileNyquistFreq {
-    fn new(quantile: f32, min_dt: f32) -> Self {
-        Self {
-            q: QuantileNyquistFreq { quantile },
-            max_freq: std::f32::consts::PI / min_dt,
-        }
-    }
-}
-
-#[allow(dead_code)]
-impl NyquistFreq<f32> for TruncQuantileNyquistFreq {
-    fn nyquist_freq(&self, t: &[f32]) -> f32 {
-        f32::min(self.q.nyquist_freq(t), self.max_freq)
-    }
-}
-
 pub fn run(config: Config) {
     let mut dumper = Dumper::new(&config.passbands);
 
@@ -96,62 +48,62 @@ pub fn run(config: Config) {
 
     if let Some(fc) = &config.feature_config {
         let mut periodogram_feature_evaluator = Periodogram::new(5);
-        periodogram_feature_evaluator.set_nyquist(Box::new(AverageNyquistFreq));
+        periodogram_feature_evaluator.set_nyquist(NyquistFreq::fixed(24.0));
         periodogram_feature_evaluator.set_freq_resolution(10.0);
         periodogram_feature_evaluator.set_max_freq_factor(2.0);
-        periodogram_feature_evaluator.add_feature(Box::new(Amplitude::default()));
-        periodogram_feature_evaluator.add_feature(Box::new(BeyondNStd::new(2.0)));
-        periodogram_feature_evaluator.add_feature(Box::new(BeyondNStd::new(3.0)));
-        periodogram_feature_evaluator.add_feature(Box::new(StandardDeviation::default()));
+        periodogram_feature_evaluator.add_feature(Amplitude::default().into());
+        periodogram_feature_evaluator.add_feature(BeyondNStd::new(2.0).into());
+        periodogram_feature_evaluator.add_feature(BeyondNStd::new(3.0).into());
+        periodogram_feature_evaluator.add_feature(StandardDeviation::default().into());
 
-        let magn_feature_extractor = feat_extr!(
-            Amplitude::default(),
-            AndersonDarlingNormal::default(),
-            BeyondNStd::new(1.0), // default
-            BeyondNStd::new(2.0),
-            Cusum::default(),
-            EtaE::default(),
-            InterPercentileRange::new(0.02),
-            InterPercentileRange::new(0.1),
-            InterPercentileRange::new(0.25),
-            Kurtosis::default(),
-            LinearFit::default(),
-            LinearTrend::default(),
-            MagnitudePercentageRatio::new(0.4, 0.05), // default
-            MagnitudePercentageRatio::new(0.2, 0.05),
-            MaximumSlope::default(),
-            Mean::default(),
-            MedianAbsoluteDeviation::default(),
-            MedianBufferRangePercentage::new(0.1),
-            MedianBufferRangePercentage::new(0.2),
-            PercentAmplitude::default(),
-            PercentDifferenceMagnitudePercentile::new(0.05), // default
-            PercentDifferenceMagnitudePercentile::new(0.1),
-            periodogram_feature_evaluator,
-            ReducedChi2::default(),
-            Skew::default(),
-            StandardDeviation::default(),
-            StetsonK::default(),
-            WeightedMean::default(),
-        );
+        let magn_feature_extractor = FeatureExtractor::from_features(vec![
+            Amplitude::default().into(),
+            AndersonDarlingNormal::default().into(),
+            BeyondNStd::new(1.0).into(), // default
+            BeyondNStd::new(2.0).into(),
+            Cusum::default().into(),
+            EtaE::default().into(),
+            InterPercentileRange::new(0.02).into(),
+            InterPercentileRange::new(0.1).into(),
+            InterPercentileRange::new(0.25).into(),
+            Kurtosis::default().into(),
+            LinearFit::default().into(),
+            LinearTrend::default().into(),
+            MagnitudePercentageRatio::new(0.4, 0.05).into(), // default
+            MagnitudePercentageRatio::new(0.2, 0.05).into(),
+            MaximumSlope::default().into(),
+            Mean::default().into(),
+            MedianAbsoluteDeviation::default().into(),
+            MedianBufferRangePercentage::new(0.1).into(),
+            MedianBufferRangePercentage::new(0.2).into(),
+            PercentAmplitude::default().into(),
+            PercentDifferenceMagnitudePercentile::new(0.05).into(), // default
+            PercentDifferenceMagnitudePercentile::new(0.1).into(),
+            periodogram_feature_evaluator.into(),
+            ReducedChi2::default().into(),
+            Skew::default().into(),
+            StandardDeviation::default().into(),
+            StetsonK::default().into(),
+            WeightedMean::default().into(),
+        ]);
 
-        let flux_feature_extractor = feat_extr!(
-            AndersonDarlingNormal::default(),
-            Cusum::default(),
-            EtaE::default(),
-            ExcessVariance::default(),
-            Kurtosis::default(),
-            MeanVariance::default(),
-            ReducedChi2::default(),
-            Skew::default(),
-            StetsonK::default(),
-        );
+        let flux_feature_extractor = FeatureExtractor::from_features(vec![
+            AndersonDarlingNormal::default().into(),
+            Cusum::default().into(),
+            EtaE::default().into(),
+            ExcessVariance::default().into(),
+            Kurtosis::default().into(),
+            MeanVariance::default().into(),
+            ReducedChi2::default().into(),
+            Skew::default().into(),
+            StetsonK::default().into(),
+        ]);
 
         dumper.set_feature_extractor(
             fc.value_path.clone(),
             fc.name_path.clone(),
-            magn_feature_extractor,
-            flux_feature_extractor,
+            magn_feature_extractor.into(),
+            flux_feature_extractor.into(),
         );
     }
 

@@ -1,7 +1,7 @@
 use crate::lc::{Passband, Source};
 use crate::traits::*;
 use crossbeam::channel::{bounded as bounded_channel, Receiver, Sender};
-use light_curve_feature::{time_series::TimeSeries, FeatureEvaluator, FeatureExtractor};
+use light_curve_feature::{TimeSeries, FeatureEvaluator, FeatureNamesDescriptionsTrait, Feature};
 use light_curve_interpol::Interpolator;
 use num_cpus;
 use std::fs::File;
@@ -50,8 +50,8 @@ impl Dump for FluxDump {
 struct FeatureDump {
     value_path: String,
     name_path: String,
-    magn_feature_extractor: FeatureExtractor<f32>,
-    flux_feature_extractor: FeatureExtractor<f32>,
+    magn_feature_extractor: Feature<f32>,
+    flux_feature_extractor: Feature<f32>,
     passbands: Vec<Passband>,
     names: Vec<String>,
 }
@@ -60,8 +60,8 @@ impl FeatureDump {
     fn new(
         value_path: String,
         name_path: String,
-        magn_feature_extractor: FeatureExtractor<f32>,
-        flux_feature_extractor: FeatureExtractor<f32>,
+        magn_feature_extractor: Feature<f32>,
+        flux_feature_extractor: Feature<f32>,
         passbands: Vec<Passband>,
     ) -> Self {
         let magn_feature_extractor_names = magn_feature_extractor.get_names();
@@ -104,8 +104,8 @@ impl Dump for FeatureDump {
                 .zip(lc.w.iter())
                 .map(|(f, w_m)| w_m / f32::powi(0.4 * f32::ln(10.0) * f, 2))
                 .collect();
-            let ts_magn = TimeSeries::new(&lc.t, &lc.mag, Some(&lc.w));
-            let ts_flux = TimeSeries::new(&lc.t, &flux, Some(&flux_weight));
+            let ts_magn = TimeSeries::new(&lc.t, &lc.mag, &lc.w);
+            let ts_flux = TimeSeries::new(&lc.t, &flux, &flux_weight);
             for (feature_extractor, ts) in &mut [
                 (&self.magn_feature_extractor, ts_magn),
                 (&self.flux_feature_extractor, ts_flux),
@@ -198,8 +198,8 @@ impl Dumper {
         &mut self,
         value_path: String,
         name_path: String,
-        magn_feature_extractor: FeatureExtractor<f32>,
-        flux_feature_extractor: FeatureExtractor<f32>,
+        magn_feature_extractor: Feature<f32>,
+        flux_feature_extractor: Feature<f32>,
     ) -> &mut Self {
         self.dumps.push(Box::new(FeatureDump::new(
             value_path,

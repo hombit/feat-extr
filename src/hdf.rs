@@ -1,7 +1,8 @@
 use crate::lc::{Observation, Source};
 use crate::traits::{Cache, CacheWriter, ObservationsToSources};
+
 use hdf5::Dataset;
-use ndarray;
+use light_curve_feature::ndarray;
 
 const DATASET_SIZE_STEP: hdf5::Ix = 1 << 16;
 static DATASET_NAME: &'static str = "dataset";
@@ -16,8 +17,9 @@ impl Hdf5Cache {
         let dataset = if create {
             let file = hdf5::File::create(path)?;
             file.new_dataset::<Observation>()
-                .resizable(true)
-                .create(DATASET_NAME, [DATASET_SIZE_STEP])?
+                // .resizable(true)
+                .shape([DATASET_SIZE_STEP])
+                .create(DATASET_NAME)?
         } else {
             let file = hdf5::File::open(path)?;
             file.dataset(DATASET_NAME)?
@@ -72,9 +74,9 @@ impl Iterator for Hdf5ObservationReader {
         if self.buffer_index == self.buffer.len() {
             let begin = self.dataset_index;
             let end = usize::min(self.dataset_index + DATASET_SIZE_STEP, self.dataset_size);
-            let slice = ndarray::s![begin..end];
+            let selection: hdf5::Selection = ndarray::s![begin..end].try_into().unwrap();
 
-            self.buffer = self.dataset.as_reader().read_slice_1d(&slice).unwrap();
+            self.buffer = self.dataset.as_reader().read_slice_1d(&selection).unwrap();
             self.buffer_index = 0;
         }
 
@@ -118,8 +120,8 @@ impl CacheWriter for Hdf5CacheWriter {
             self.dataset.resize(self.size).unwrap();
         }
 
-        let slice = ndarray::s![begin..begin + observations.len()];
-        self.dataset.write_slice(&observations, &slice).unwrap();
+        let selection: hdf5::Selection = ndarray::s![begin..begin + observations.len()].try_into().unwrap();
+        self.dataset.write_slice(&observations, &selection).unwrap();
     }
 }
 
