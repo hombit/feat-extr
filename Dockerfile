@@ -19,7 +19,7 @@ RUN mkdir -p /app/src/bin \
     && rm -r /app/src
 
 COPY ./src/ /app/src/
-RUN cargo build --release
+RUN cargo build --release --no-default-features --features hdf,fftw-mkl
 
 ###################
 FROM debian:buster-slim
@@ -46,4 +46,4 @@ COPY --from=build /app/target/release/feat_extr /app
 
 VOLUME /data
 
-ENTRYPOINT ["/app", "--dir=/data"]
+CMD ["/app", "--dir=/data"]

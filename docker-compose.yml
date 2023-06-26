@@ -49,3 +49,16 @@ services:
     restart: 'no'
     volumes:
       - /home/hombit/test-features:/data
+
+  clickhouse_lpc:
+    build: .
+    restart: 'no'
+    volumes:
+      - /home/hombit/features:/data
+    networks:
+      - clickhouse
+
+
+networks:
+  clickhouse:
+    external: true
