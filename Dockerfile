@@ -4,7 +4,7 @@ ENV RUSTFLAGS "-C target-cpu=native"
 
 # # Install HDF5
 RUN apt-get update \
-    && apt-get install -y libhdf5-dev \
+    && apt-get install -y libhdf5-dev cmake g++ \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /app
