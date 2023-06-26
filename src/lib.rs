@@ -1,5 +1,4 @@
 use light_curve_common::linspace;
-use light_curve_feature::*;
 use light_curve_interpol::Interpolator;
 
 #[cfg(feature = "hdf")]
@@ -17,6 +16,8 @@ use config::{Config, DataBase};
 
 mod dump;
 use dump::Dumper;
+
+mod features;
 
 #[cfg(feature = "hdf")]
 mod hdf;
@@ -47,63 +48,11 @@ pub fn run(config: Config) {
     }
 
     if let Some(fc) = &config.feature_config {
-        let mut periodogram_feature_evaluator = Periodogram::new(5);
-        periodogram_feature_evaluator.set_nyquist(NyquistFreq::fixed(24.0));
-        periodogram_feature_evaluator.set_freq_resolution(10.0);
-        periodogram_feature_evaluator.set_max_freq_factor(2.0);
-        periodogram_feature_evaluator.add_feature(Amplitude::default().into());
-        periodogram_feature_evaluator.add_feature(BeyondNStd::new(2.0).into());
-        periodogram_feature_evaluator.add_feature(BeyondNStd::new(3.0).into());
-        periodogram_feature_evaluator.add_feature(StandardDeviation::default().into());
-
-        let magn_feature_extractor = FeatureExtractor::from_features(vec![
-            Amplitude::default().into(),
-            AndersonDarlingNormal::default().into(),
-            BeyondNStd::new(1.0).into(), // default
-            BeyondNStd::new(2.0).into(),
-            Cusum::default().into(),
-            EtaE::default().into(),
-            InterPercentileRange::new(0.02).into(),
-            InterPercentileRange::new(0.1).into(),
-            InterPercentileRange::new(0.25).into(),
-            Kurtosis::default().into(),
-            LinearFit::default().into(),
-            LinearTrend::default().into(),
-            MagnitudePercentageRatio::new(0.4, 0.05).into(), // default
-            MagnitudePercentageRatio::new(0.2, 0.05).into(),
-            MaximumSlope::default().into(),
-            Mean::default().into(),
-            MedianAbsoluteDeviation::default().into(),
-            MedianBufferRangePercentage::new(0.1).into(),
-            MedianBufferRangePercentage::new(0.2).into(),
-            PercentAmplitude::default().into(),
-            PercentDifferenceMagnitudePercentile::new(0.05).into(), // default
-            PercentDifferenceMagnitudePercentile::new(0.1).into(),
-            periodogram_feature_evaluator.into(),
-            ReducedChi2::default().into(),
-            Skew::default().into(),
-            StandardDeviation::default().into(),
-            StetsonK::default().into(),
-            WeightedMean::default().into(),
-        ]);
-
-        let flux_feature_extractor = FeatureExtractor::from_features(vec![
-            AndersonDarlingNormal::default().into(),
-            Cusum::default().into(),
-            EtaE::default().into(),
-            ExcessVariance::default().into(),
-            Kurtosis::default().into(),
-            MeanVariance::default().into(),
-            ReducedChi2::default().into(),
-            Skew::default().into(),
-            StetsonK::default().into(),
-        ]);
-
         dumper.set_feature_extractor(
             fc.value_path.clone(),
             fc.name_path.clone(),
-            magn_feature_extractor.into(),
-            flux_feature_extractor.into(),
+            fc.version.magn_extractor(),
+            fc.version.flux_extractor(),
         );
     }
 

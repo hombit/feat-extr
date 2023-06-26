@@ -4,6 +4,7 @@ HOST=clickhouse
 DIR=/data
 MINNOBS=$1
 PASSBAND_STR=$2
+FEATURE_VERSION=$3
 
 if [[ "$PASSBAND_STR" == 'g' ]]; then
   PASSBAND_NUM=1
@@ -15,7 +16,7 @@ if [[ "$PASSBAND_STR" == 'i' ]]; then
   PASSBAND_NUM=3
 fi
 
-NAME="old_${PASSBAND_STR}_${MINNOBS}"
+NAME="${FEATURE_VERSION}_${PASSBAND_STR}_${MINNOBS}"
 SUFFIX="_${NAME}"
 
 QUERY="
@@ -54,4 +55,5 @@ docker-compose run --rm clickhouse_lpc /app \
     --suffix=${SUFFIX} \
     --connect="tcp://default@${HOST}:9000/ztf" \
     --sorted \
-    --features
+    --features \
+    --feature-version=${FEATURE_VERSION}

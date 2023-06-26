@@ -1,15 +1,14 @@
+use crate::features::FeatureVersion;
 use crate::lc::Passband;
 
-use base64::Engine;
-use clap::{App, Arg, ArgMatches};
-use std::path::Path;
-
 #[cfg(feature = "hdf")]
-use base64;
+use base64::{self, Engine};
+use clap::{App, Arg, ArgMatches};
 #[cfg(feature = "hdf")]
 use md5;
 #[cfg(feature = "hdf")]
 use std::ops::Deref;
+use std::path::Path;
 
 pub fn arg_matches() -> ArgMatches<'static> {
     App::new("Query light curves and extrac features")
@@ -82,6 +81,13 @@ pub fn arg_matches() -> ArgMatches<'static> {
                 .help("Do feature extraction"),
         )
         .arg(
+            Arg::with_name("feature-version")
+                .long("feature-version")
+                .takes_value(true)
+                .default_value("snad4")
+                .help("Version of the feature extractor"),
+        )
+        .arg(
             Arg::with_name("cache_dir")
                 .long("cache")
                 .takes_value(true)
@@ -132,6 +138,7 @@ impl Config {
         passbands_str: &str,
         interpolation_enabled: bool,
         features_enabled: bool,
+        feature_version: &str,
         cache_dir: Option<&str>,
         no_sid: bool,
     ) -> Self {
@@ -158,6 +165,7 @@ impl Config {
             Some(FeatureConfig {
                 value_path: Self::get_path(output_dir, "feature", suffix, ".dat"),
                 name_path: Self::get_path(output_dir, "feature", suffix, ".name"),
+                version: feature_version.parse().unwrap(),
             })
         } else {
             None
@@ -204,6 +212,7 @@ impl Config {
         let passbands = matches.value_of("passbands").unwrap();
         let interpolation_enabled = matches.is_present("interpolate");
         let features_enabled = matches.is_present("features");
+        let feature_version = matches.value_of("feature-version").unwrap();
         let cache_dir = matches.value_of("cache_dir").map(|s| match s {
             "-" => output_dir,
             _ => s,
@@ -219,6 +228,7 @@ impl Config {
             passbands,
             interpolation_enabled,
             features_enabled,
+            feature_version,
             cache_dir,
             no_sid,
         )
@@ -232,6 +242,7 @@ pub struct InterpolationConfig {
 pub struct FeatureConfig {
     pub value_path: String,
     pub name_path: String,
+    pub version: FeatureVersion,
 }
 
 pub struct CacheConfig {
