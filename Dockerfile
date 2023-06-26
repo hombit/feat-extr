@@ -1,4 +1,4 @@
-FROM rust:1.70-buster AS build
+FROM rust:1.70-bookworm AS build
 
 ENV RUSTFLAGS "-C target-cpu=native"
 
@@ -22,7 +22,7 @@ COPY ./src/ /app/src/
 RUN cargo build --release --no-default-features --features hdf,fftw-mkl
 
 ###################
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 
 # Install MKL
 ARG MKL_VERSION=2020.1
