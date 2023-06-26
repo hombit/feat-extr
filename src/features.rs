@@ -1,4 +1,4 @@
-use light_curve_feature::*;
+use light_curve_feature::{transformers::bazin_fit::BazinFitTransformer, *};
 use std::str::FromStr;
 
 pub enum FeatureVersion {
@@ -63,7 +63,37 @@ impl FeatureVersion {
     }
 
     fn snad6_magn_extractor() -> Feature<f32> {
-        FeatureExtractor::from_features(vec![InterPercentileRange::new(0.02).into()]).into()
+        let mut bins = Bins::new(1.0, 0.0);
+        bins.add_feature(Cusum::new().into());
+        bins.add_feature(EtaE::new().into());
+        bins.add_feature(LinearFit::new().into());
+        bins.add_feature(LinearTrend::new().into());
+        bins.add_feature(MaximumSlope::new().into());
+
+        let mut periodogram_feature_evaluator = Periodogram::new(5);
+        periodogram_feature_evaluator.set_nyquist(NyquistFreq::fixed(24.0));
+        periodogram_feature_evaluator.set_freq_resolution(10.0);
+        periodogram_feature_evaluator.set_max_freq_factor(2.0);
+        periodogram_feature_evaluator.add_feature(BeyondNStd::new(2.0).into());
+        periodogram_feature_evaluator.add_feature(BeyondNStd::new(3.0).into());
+
+        FeatureExtractor::from_features(vec![
+            BeyondNStd::new(1.0).into(), // default
+            BeyondNStd::new(2.0).into(),
+            bins.into(),
+            Duration::new().into(),
+            InterPercentileRange::new(0.02).into(),
+            InterPercentileRange::new(0.1).into(),
+            InterPercentileRange::new(0.25).into(),
+            Kurtosis::new().into(),
+            OtsuSplit::new().into(),
+            periodogram_feature_evaluator.into(),
+            ReducedChi2::new().into(),
+            Skew::new().into(),
+            StetsonK::new().into(),
+            WeightedMean::new().into(),
+        ])
+        .into()
     }
 
     pub fn magn_extractor(&self) -> Feature<f32> {
@@ -89,7 +119,25 @@ impl FeatureVersion {
     }
 
     fn snad6_flux_extractor() -> Feature<f32> {
-        FeatureExtractor::from_features(vec![AndersonDarlingNormal::default().into()]).into()
+        let bazin_fit: Feature<f32> = {
+            let prior = BazinLnPrior::fixed(LnPrior::none());
+            let fit = BazinFit::new(
+                CeresCurveFit::new(20, None).into(),
+                prior,
+                BazinInitsBounds::Default,
+            );
+            let feature: Feature<f32> = fit.into();
+            let transformer = Transformer::BazinFit(BazinFitTransformer::new(0.0));
+            let transformed = Transformed::new(feature, transformer).unwrap();
+            transformed.into()
+        };
+
+        FeatureExtractor::from_features(vec![
+            AndersonDarlingNormal::default().into(),
+            bazin_fit,
+            ExcessVariance::new().into(),
+        ])
+        .into()
     }
 
     pub fn flux_extractor(&self) -> Feature<f32> {

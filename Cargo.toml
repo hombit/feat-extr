@@ -17,7 +17,7 @@ hdf = ["hdf5"]
 [dependencies]
 light-curve-common = "0.1.1"
 light-curve-interpol = "0.1.1"
-light-curve-feature = { version = "0.5.5", default-features = false }
+light-curve-feature = { version = "0.5.5", default-features = false, features = ["ceres-source"] }
 num-traits = "0.2.15"
 num-derive = "0.3.3"
 conv = "0.3.2"
