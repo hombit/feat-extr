@@ -9,7 +9,9 @@ lto = true
 codegen-units = 1
 
 [features]
-default = ["fftw-system", "hdf"]
+default = ["ceres-source", "fftw-system", "hdf"]
+ceres-source = ["light-curve-feature/ceres-source"]
+ceres-system = ["light-curve-feature/ceres-system"]
 fftw-system = ["light-curve-feature/fftw-system"]
 fftw-mkl = ["light-curve-feature/fftw-mkl"]
 hdf = ["hdf5"]
@@ -17,7 +19,7 @@ hdf = ["hdf5"]
 [dependencies]
 light-curve-common = "0.1.1"
 light-curve-interpol = "0.1.1"
-light-curve-feature = { version = "0.5.5", default-features = false, features = ["ceres-source"] }
+light-curve-feature = { version = "0.5.5", default-features = false }
 num-traits = "0.2.15"
 num-derive = "0.3.3"
 conv = "0.3.2"
