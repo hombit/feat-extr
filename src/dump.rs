@@ -1,5 +1,7 @@
+use crate::constants::MAG_ZP_F32;
 use crate::lc::{Passband, Source};
 use crate::traits::*;
+
 use crossbeam::channel::{bounded as bounded_channel, Receiver, Sender};
 use light_curve_feature::{Feature, FeatureEvaluator, FeatureNamesDescriptionsTrait, TimeSeries};
 use light_curve_interpol::Interpolator;
@@ -8,6 +10,10 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::iter::Iterator;
 use std::thread;
+
+fn mag_to_flux(mag: f32) -> f32 {
+    10_f32.powf(-0.4 * (mag - MAG_ZP_F32))
+}
 
 #[derive(Clone)]
 struct FluxDump {
@@ -21,7 +27,7 @@ impl Dump for FluxDump {
         let mut result = vec![];
         for &passband in self.passbands.iter() {
             let lc = source.lc(passband);
-            let flux: Vec<_> = lc.mag.iter().map(|&x| 10_f32.powf(-0.4 * x)).collect();
+            let flux: Vec<_> = lc.mag.iter().copied().map(mag_to_flux).collect();
             self.interpolator
                 .interpolate(&lc.t[..], &flux[..])
                 .iter()
@@ -98,7 +104,7 @@ impl Dump for FeatureDump {
         let mut result = vec![];
         for &passband in self.passbands.iter() {
             let lc = source.lc(passband);
-            let flux: Vec<_> = lc.mag.iter().map(|&m| 10_f32.powf(-0.4 * m)).collect();
+            let flux: Vec<_> = lc.mag.iter().copied().map(mag_to_flux).collect();
             let flux_weight: Vec<_> = flux
                 .iter()
                 .zip(lc.w.iter())

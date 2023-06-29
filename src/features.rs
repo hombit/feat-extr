@@ -1,3 +1,5 @@
+use crate::constants::{MAG_ZP_F32, MAG_ZP_F64};
+
 use light_curve_feature::transformers::{
     arcsinh::ArcsinhTransformer, bazin_fit::BazinFitTransformer, composed::ComposedTransformer,
     identity::IdentityTransformer, lg::LgTransformer, ln1p::Ln1pTransformer,
@@ -139,8 +141,8 @@ impl FeatureVersion {
             let feature = OtsuSplit::new().into();
             let transformer: Transformer<f32> = ComposedTransformer::new(vec![
                 (LgTransformer {}.into(), 1),       // mean diff
-                (LgTransformer {}.into(), 1),       // std lower
-                (LgTransformer {}.into(), 1),       // std upper
+                (IdentityTransformer {}.into(), 1), // std lower
+                (IdentityTransformer {}.into(), 1), // std upper
                 (IdentityTransformer {}.into(), 1), // lower to all ratio
             ])
             .unwrap()
@@ -211,18 +213,18 @@ impl FeatureVersion {
             let inits_bounds = BazinInitsBounds::option_arrays(
                 [None; 5],
                 [
-                    Some(f64::powf(10.0, -0.4 * 30.0)), // amplitude
-                    None,                               // baseline
-                    None,                               // t0
-                    Some(1e-4),                         // rise time
-                    Some(1e-4),                         // fall time
+                    Some(f64::powf(10.0, -0.4 * (30.0 - MAG_ZP_F64))), // amplitude
+                    None,                                              // baseline
+                    None,                                              // t0
+                    Some(1e-4),                                        // rise time
+                    Some(1e-4),                                        // fall time
                 ],
                 [
-                    Some(f64::powf(10.0, -0.4 * 0.0)), // amplitude
-                    None,                              // baseline
-                    None,                              // t0
-                    Some(1e5),                         // rise time
-                    Some(1e5),                         // fall time
+                    Some(f64::powf(10.0, -0.4 * (0.0 - MAG_ZP_F64))), // amplitude
+                    None,                                             // baseline
+                    None,                                             // t0
+                    Some(3e4),                                        // rise time
+                    Some(3e4),                                        // fall time
                 ],
             );
 
@@ -232,7 +234,7 @@ impl FeatureVersion {
                 inits_bounds,
             );
             let feature: Feature<f32> = fit.into();
-            let transformer = Transformer::BazinFit(BazinFitTransformer::new(0.0));
+            let transformer = Transformer::BazinFit(BazinFitTransformer::new(MAG_ZP_F32));
             let transformed = Transformed::new(feature, transformer).unwrap();
             transformed.into()
         };
