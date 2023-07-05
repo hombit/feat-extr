@@ -54,6 +54,7 @@ pub fn run(config: Config) {
         dumper.set_feature_extractor(
             fc.value_path.clone(),
             fc.name_path.clone(),
+            fc.json_path.clone(),
             fc.version.magn_extractor(),
             fc.version.flux_extractor(),
         );
@@ -62,6 +63,7 @@ pub fn run(config: Config) {
     dump_data(&mut dumper, &config);
 
     dumper.write_names();
+    dumper.write_json();
 }
 
 #[cfg(feature = "hdf")]

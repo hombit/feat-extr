@@ -165,6 +165,7 @@ impl Config {
             Some(FeatureConfig {
                 value_path: Self::get_path(output_dir, "feature", suffix, ".dat"),
                 name_path: Self::get_path(output_dir, "feature", suffix, ".name"),
+                json_path: Self::get_path(output_dir, "feature", suffix, ".json"),
                 version: feature_version.parse().unwrap(),
             })
         } else {
@@ -242,6 +243,7 @@ pub struct InterpolationConfig {
 pub struct FeatureConfig {
     pub value_path: String,
     pub name_path: String,
+    pub json_path: String,
     pub version: FeatureVersion,
 }
 

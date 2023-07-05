@@ -17,7 +17,7 @@ if [[ "$PASSBAND_STR" == 'i' ]]; then
 fi
 
 NAME="${FEATURE_VERSION}_${PASSBAND_STR}_${MINNOBS}"
-SUFFIX="_${NAME}"
+SUFFIX="_${NAME}_test"
 
 QUERY="
 WITH
@@ -45,6 +45,7 @@ ARRAY JOIN
     mag,
     magerr
 WHERE (mjd >= mjd_min) AND (mjd <= mjd_max)
+LIMIT 100
 "
 
 docker-compose run --rm clickhouse_lpc /app \

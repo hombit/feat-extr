@@ -35,6 +35,7 @@ md5 = "0.7.0"
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust", optional = true, rev = "26046fb4900ec38afd2a1c0494cff688b288662e" }
 dyn-clonable = "0.9"
 base64 = "0.21.2"
+serde_json = "1"
 
 [dependencies.clickhouse-rs]
 git="https://github.com/suharev7/clickhouse-rs/"

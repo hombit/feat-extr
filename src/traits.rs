@@ -11,8 +11,10 @@ pub trait SourceDataBase<'a> {
 pub trait Dump: Clone + Send {
     fn eval(&self, source: &Source) -> Vec<u8>;
     fn get_names(&self) -> Vec<&str>;
+    fn get_json(&self) -> &str;
     fn get_value_path(&self) -> &str;
     fn get_name_path(&self) -> Option<&str>;
+    fn get_json_path(&self) -> Option<&str>;
 }
 
 #[clonable]

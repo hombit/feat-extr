@@ -43,11 +43,19 @@ impl Dump for FluxDump {
         vec![]
     }
 
+    fn get_json(&self) -> &str {
+        ""
+    }
+
     fn get_value_path(&self) -> &str {
         self.path.as_str()
     }
 
     fn get_name_path(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_json_path(&self) -> Option<&str> {
         None
     }
 }
@@ -56,16 +64,19 @@ impl Dump for FluxDump {
 struct FeatureDump {
     value_path: String,
     name_path: String,
+    json_path: String,
     magn_feature_extractor: Feature<f32>,
     flux_feature_extractor: Feature<f32>,
     passbands: Vec<Passband>,
     names: Vec<String>,
+    json: String,
 }
 
 impl FeatureDump {
     fn new(
         value_path: String,
         name_path: String,
+        json_path: String,
         magn_feature_extractor: Feature<f32>,
         flux_feature_extractor: Feature<f32>,
         passbands: Vec<Passband>,
@@ -88,13 +99,23 @@ impl FeatureDump {
                 )
             })
             .collect();
+        let json = serde_json::json!({
+            "magn": &magn_feature_extractor,
+            "flux": {
+                "extractor": &flux_feature_extractor,
+                "zero_point": MAG_ZP_F32,
+                }
+        })
+        .to_string();
         Self {
             value_path,
             name_path,
+            json_path,
             magn_feature_extractor,
             flux_feature_extractor,
             passbands,
             names,
+            json,
         }
     }
 }
@@ -133,12 +154,20 @@ impl Dump for FeatureDump {
         self.names.iter().map(|s| s.as_str()).collect()
     }
 
+    fn get_json(&self) -> &str {
+        self.json.as_str()
+    }
+
     fn get_value_path(&self) -> &str {
         self.value_path.as_str()
     }
 
     fn get_name_path(&self) -> Option<&str> {
         Some(self.name_path.as_str())
+    }
+
+    fn get_json_path(&self) -> Option<&str> {
+        Some(self.json_path.as_str())
     }
 }
 
@@ -156,11 +185,19 @@ impl Dump for SIDDump {
         vec![]
     }
 
+    fn get_json(&self) -> &str {
+        ""
+    }
+
     fn get_value_path(&self) -> &str {
         self.path.as_str()
     }
 
     fn get_name_path(&self) -> Option<&str> {
+        None
+    }
+
+    fn get_json_path(&self) -> Option<&str> {
         None
     }
 }
@@ -204,12 +241,14 @@ impl Dumper {
         &mut self,
         value_path: String,
         name_path: String,
+        json_path: String,
         magn_feature_extractor: Feature<f32>,
         flux_feature_extractor: Feature<f32>,
     ) -> &mut Self {
         self.dumps.push(Box::new(FeatureDump::new(
             value_path,
             name_path,
+            json_path,
             magn_feature_extractor,
             flux_feature_extractor,
             self.passbands.clone(),
@@ -342,6 +381,18 @@ impl Dumper {
                         writer.write(name.as_bytes()).unwrap() + writer.write(b"\n").unwrap()
                     })
                     .sum::<usize>()
+            })
+            .sum()
+    }
+
+    pub fn write_json(&self) -> usize {
+        self.dumps
+            .iter()
+            .filter_map(|dump| dump.get_json_path().and_then(|path| Some((dump, path))))
+            .map(|(dump, path)| {
+                let mut writer = Self::writer_from_path(path);
+                let json_str = dump.get_json();
+                writer.write(json_str.as_bytes()).unwrap()
             })
             .sum()
     }
