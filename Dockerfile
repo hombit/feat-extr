@@ -28,17 +28,21 @@ FROM debian:bookworm-slim
 ENV GLOG_minloglevel=4
 
 # Install MKL
-ARG MKL_VERSION=2020.1
-RUN apt-get update \
-    && apt-get install -y curl gnupg2 \
-    && curl https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB | apt-key add - \
-    && apt-get purge -y curl gnupg2 \
-    && echo 'deb https://apt.repos.intel.com/mkl all main' > /etc/apt/sources.list.d/intel-mkl.list \
+# ARG MKL_VERSION=2020.1
+# RUN apt-get update \
+#     && apt-get install -y curl gnupg2 \
+#     && curl https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB | apt-key add - \
+#     && apt-get purge -y curl gnupg2 \
+#     && echo 'deb https://apt.repos.intel.com/mkl all main' > /etc/apt/sources.list.d/intel-mkl.list \
+#     && apt-get update \
+#     && apt-get install -y intel-mkl-64bit-${MKL_VERSION} \
+#     && rm -rf /var/lib/apt/lists/* \
+#     && printf '/opt/intel/lib/intel64\n/opt/intel/mkl/lib/intel64\n' > /etc/ld.so.conf.d/intel_mkl.conf \
+#     && ldconfig
+RUN sed -i 's/^Components: main$/& contrib non-free/' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
-    && apt-get install -y intel-mkl-64bit-${MKL_VERSION} \
-    && rm -rf /var/lib/apt/lists/* \
-    && printf '/opt/intel/lib/intel64\n/opt/intel/mkl/lib/intel64\n' > /etc/ld.so.conf.d/intel_mkl.conf \
-    && ldconfig
+    && apt-get install -y intel-mkl
+
 
 # Install HDF5 and Ceres
 RUN apt-get update \
