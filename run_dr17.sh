@@ -17,7 +17,7 @@ if [[ "$PASSBAND_STR" == 'i' ]]; then
 fi
 
 NAME="${FEATURE_VERSION}_${PASSBAND_STR}_${MINNOBS}"
-SUFFIX="_${NAME}_test"
+SUFFIX="_${NAME}"
 
 QUERY="
 WITH
@@ -38,14 +38,13 @@ FROM
         mag,
         magerr AS magerr
     FROM ztf.dr17_olc
-    WHERE (filter = 2) AND (arraySum(t -> ((t >= mjd_min) AND (t <= mjd_max)), mjd) >= 100) AND (abs((asin((sin(0.4734773249532946) * sin((pi() / 180.) * dec)) + ((cos(0.4734773249532946) * cos((pi() / 180.) * dec)) * cos(((pi() / 180.) * ra) - 3.366032882941064))) * 180.) / pi()) > 15.)
+    WHERE (filter = ${PASSBAND_NUM}) AND (arraySum(t -> ((t >= mjd_min) AND (t <= mjd_max)), mjd) >= ${MINNOBS}) AND (abs((asin((sin(0.4734773249532946) * sin((pi() / 180.) * dec)) + ((cos(0.4734773249532946) * cos((pi() / 180.) * dec)) * cos(((pi() / 180.) * ra) - 3.366032882941064))) * 180.) / pi()) > 15.)
 )
 ARRAY JOIN
     mjd,
     mag,
     magerr
 WHERE (mjd >= mjd_min) AND (mjd <= mjd_max)
-LIMIT 100
 "
 
 docker-compose run --rm clickhouse_lpc /app \
