@@ -34,6 +34,6 @@ RUSTFLAGS="-Ctarget-cpu=native" cargo run --release --no-default-features --feat
     --passbands=${PASSBAND_STR} \
     --dir=${DIR} \
     --suffix=${SUFFIX} \
-    --connect="tcp://default@${HOST}:9000/ztf" \
+    --connect="tcp://api@${HOST}:9000/ztf" \
     --sorted \
     --features

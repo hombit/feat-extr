@@ -53,7 +53,7 @@ docker-compose run --rm clickhouse_lpc /app \
     --passbands=${PASSBAND_STR} \
     --dir=${DIR} \
     --suffix=${SUFFIX} \
-    --connect="tcp://default@${HOST}:9000/ztf" \
+    --connect="tcp://api@${HOST}:9000/ztf" \
     --sorted \
     --features \
     --feature-version=${FEATURE_VERSION}
