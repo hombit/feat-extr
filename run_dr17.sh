@@ -1,10 +1,10 @@
 #!/bin/bash
 
-HOST=clickhouse
 DIR=/data
 MINNOBS=$1
 PASSBAND_STR=$2
 FEATURE_VERSION=$3
+HOST=$4
 
 if [[ "$PASSBAND_STR" == 'g' ]]; then
   PASSBAND_NUM=1
@@ -17,7 +17,7 @@ if [[ "$PASSBAND_STR" == 'i' ]]; then
 fi
 
 NAME="${FEATURE_VERSION}_${PASSBAND_STR}_${MINNOBS}"
-SUFFIX="_${NAME}"
+SUFFIX="_${NAME}_test"
 
 QUERY="
 WITH
@@ -45,9 +45,10 @@ ARRAY JOIN
     mag,
     magerr
 WHERE (mjd >= mjd_min) AND (mjd <= mjd_max)
+LIMIT 100
 "
 
-docker-compose run --rm clickhouse_lpc /app \
+docker-compose run --rm clickhouse_cyg /app \
     clickhouse \
     "$QUERY" \
     --passbands=${PASSBAND_STR} \
