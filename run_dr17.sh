@@ -39,6 +39,7 @@ FROM
         magerr AS magerr
     FROM ztf.dr17_olc
     WHERE (filter = ${PASSBAND_NUM}) AND (arraySum(t -> ((t >= mjd_min) AND (t <= mjd_max)), mjd) >= ${MINNOBS}) AND (abs((asin((sin(0.4734773249532946) * sin((pi() / 180.) * dec)) + ((cos(0.4734773249532946) * cos((pi() / 180.) * dec)) * cos(((pi() / 180.) * ra) - 3.366032882941064))) * 180.) / pi()) > 15.)
+--    LIMIT 5
 )
 ARRAY JOIN
     mjd,
