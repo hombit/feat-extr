@@ -1,64 +1,18 @@
 version: '2.2'
+
 services:
-        #   feat_extr:
-        #     build: .
-        #     restart: 'no'
-        # 
-        #   test_postgres:
-        #     build: .
-        #     restart: 'no'
-        #     volumes:
-        #       - /srv/pgsql/tmp:/data
-        #     environment:
-        #       RUST_BACKTRACE: 1
-        #     command: >
-        #       postgres
-        #       "SELECT oid, mjd, mag, magerr
-        #         FROM dr1_lc
-        #         LIMIT 1000;
-        #       "
-        #       --connect="host=snad.sai.msu.ru user=api dbname=ztf"
-        #       --suffix=_test_pg
-        #       --interpol
-        #       --features
-        #       --cache=-
-        # 
-        #   test_clickhouse:
-        #     build: .
-        #     restart: 'no'
-        #     volumes:
-        #       - /srv/pgsql/tmp:/data
-        #     environment:
-        #       RUST_BACKTRACE: 1
-        #     command: >
-        #       clickhouse
-        #       "SELECT oid, mjd, mag, magerr
-        #         FROM ztf.dr2
-        #         /*LIMIT 1000*/
-        #         WHERE h3index10 <= 621496800000000000
-        #         ORDER BY h3index10, oid, mjd
-        #       "
-        #       --connect="tcp://api@snad.sai.msu.ru:9000"
-        #       --suffix=_test_ch
-        #       --interpol
-        #       --features
-        #       --cache=-
-        # 
      clickhouse_cyg:
        build: .
        restart: 'no'
        volumes:
-         - /home/hombit/test-features:/data
+         - /home/timofey/feat-extr/snad_clf_features:/data
+       user: "1015:1015"
+       cpus: 28
+       environment:
+         - RUST_BACKTRACE=1
+
+
     
-        #   clickhouse_lpc:
-        #     build: .
-        #     restart: 'no'
-        #     volumes:
-        #       - /home/hombit/features:/data
-        #     networks:
-        #       - clickhouse
-
-
-           # networks:
-           #   clickhouse:
-           #     external: true
+#networks:
+#  clickhouse:
+#    external: true
